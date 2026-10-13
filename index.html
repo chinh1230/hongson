@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cổng Thông Tin PCGD Cấp Xã</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SheetJS xử lý Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    .sticky-col-1 { position: sticky; left: 0px; z-index: 20; }
+    .sticky-col-2 { position: sticky; left: 45px; z-index: 20; }
+    th.sticky-col-1, th.sticky-col-2 { z-index: 30; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- MÀN HÌNH ĐĂNG NHẬP -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+      <div class="text-center mb-6">
+        <span class="text-4xl">🏛️</span>
+        <h2 class="text-lg font-bold text-slate-800 mt-2">HỆ THỐNG PCGD TOÀN XÃ</h2>
+        <p class="text-xs text-slate-500">Đăng nhập tài khoản điều tra / quản lý</p>
+      </div>
+      <form id="formLogin" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tài khoản</label>
+          <input type="text" id="loginUser" required placeholder="admin hoặc tên giáo viên" class="w-full border rounded-lg p-2.5 text-xs focus:outline-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu</label>
+          <input type="password" id="loginPass" required placeholder="••••••" class="w-full border rounded-lg p-2.5 text-xs focus:outline-blue-500">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-md">
+          ĐĂNG NHẬP VÀO HỆ THỐNG
+        </button>
+      </form>
+      <div class="mt-4 text-[11px] text-slate-400 text-center">
+        Tài khoản mặc định: <b>admin</b> / Mật khẩu: <b>123456</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- GIAO DIỆN CHÍNH SAU KHI ĐĂNG NHẬP -->
+  <div id="mainApp" class="hidden flex-1 flex flex-col">
+    <!-- Header -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+      <div class="max-w-full px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🏛️</span>
+          <div>
+            <h1 class="text-sm font-bold tracking-wide uppercase" id="appTitle">HỆ THỐNG ĐIỀU TRA PCGD XÃ HỒNG SƠN</h1>
+            <p class="text-[11px] text-slate-400">
+              Người dùng: <span id="userBadge" class="text-amber-400 font-semibold"></span> 
+              • Thôn phụ trách: <span id="villageBadge" class="text-emerald-400 font-semibold"></span>
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Các nút tác vụ cho Quản trị xã -->
+          <div id="adminActions" class="hidden flex items-center gap-2">
+            <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer font-semibold shadow transition">
+              📂 Nạp dữ liệu gốc (.xlsx)
+              <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+            </label>
+            <button id="btnBulkPromote" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold shadow transition">
+              🚀 Lên lớp toàn xã (+1)
+            </button>
+          </div>
+
+          <button id="btnExportExcel" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold shadow transition">
+            💾 Xuất Excel nộp Bộ
+          </button>
+          <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Thanh thống kê & Bộ lọc -->
+    <div class="bg-white border-b px-4 py-2 flex flex-wrap justify-between items-center gap-2 text-xs">
+      <div class="flex items-center gap-2 flex-wrap flex-1">
+        <input type="text" id="searchInput" placeholder="🔍 Tìm theo Tên, Chủ hộ..." class="border rounded px-2.5 py-1 text-xs w-56 focus:outline-blue-500">
+        
+        <select id="filterVillage" class="border rounded px-2 py-1 text-xs bg-white focus:outline-blue-500">
+          <option value="">-- Tất cả Thôn/Bản --</option>
+        </select>
+
+        <select id="filterClass" class="border rounded px-2 py-1 text-xs bg-white focus:outline-blue-500">
+          <option value="">-- Tất cả các Lớp --</option>
+          <option value="Mầm non">Mầm non (0-5 tuổi)</option>
+          <option value="Lớp 1">Lớp 1</option>
+          <option value="Lớp 2">Lớp 2</option>
+          <option value="Lớp 3">Lớp 3</option>
+          <option value="Lớp 4">Lớp 4</option>
+          <option value="Lớp 5">Lớp 5</option>
+          <option value="Lớp 6">Lớp 6</option>
+          <option value="Lớp 7">Lớp 7</option>
+          <option value="Lớp 8">Lớp 8</option>
+          <option value="Lớp 9">Lớp 9</option>
+          <option value="Đã tốt nghiệp">Đã tốt nghiệp</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-4 text-slate-500 font-medium">
+        <div>Tổng số: <b id="statTotal" class="text-blue-600">0</b></div>
+        <div>Mầm non: <b id="statMN" class="text-amber-600">0</b></div>
+        <div>Tiểu học: <b id="statTH" class="text-emerald-600">0</b></div>
+        <div>THCS: <b id="statTHCS" class="text-indigo-600">0</b></div>
+      </div>
+    </div>
+
+    <!-- Bảng dữ liệu trực tuyến -->
+    <main class="flex-1 overflow-hidden p-2 flex flex-col">
+      <div class="bg-white rounded-lg border border-slate-300 shadow flex-1 overflow-auto max-h-[calc(100vh-140px)] relative">
+        <table class="w-full text-left text-[11px] border-collapse whitespace-nowrap">
+          <thead class="bg-slate-200 text-slate-700 uppercase font-bold sticky top-0 z-30 select-none border-b border-slate-300">
+            <tr class="divide-x divide-slate-300">
+              <th class="px-2 py-2 text-center w-12 sticky-col-1 bg-slate-200">TT</th>
+              <th class="px-3 py-2 w-44 sticky-col-2 bg-slate-200">Họ và Tên</th>
+              <th class="px-2 py-2 w-20 text-center">Năm sinh</th>
+              <th class="px-2 py-2 w-12 text-center">Nữ</th>
+              <th class="px-3 py-2 w-36">Chủ hộ</th>
+              <th class="px-3 py-2 w-48">Địa chỉ / Thôn</th>
+              <th class="px-3 py-2 w-28 text-center">Lớp học</th>
+              <th class="px-2 py-2 w-16 text-center">Lên lớp</th>
+              <th class="px-3 py-2 w-36">Mã / Tên Trường</th>
+              <th class="px-3 py-2 w-28 text-center">Tình trạng cư trú</th>
+              <th class="px-3 py-2 w-40">Họ tên Cha/Mẹ</th>
+              <th class="px-3 py-2 w-28">Điện thoại</th>
+              <th class="px-3 py-2 w-48">Ghi chú điều tra</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-200 font-normal">
+            <tr>
+              <td colspan="13" class="text-center py-20 text-slate-400 text-sm">Đang tải dữ liệu từ máy chủ...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // CẤU HÌNH KẾT NỐI SUPABASE (Thay thông tin của dự án bạn vào đây)
+    // -------------------------------------------------------------
+    const SUPABASE_URL = "otaocgzymkmzbzmmbzba";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YW9jZ3p5bWttemJ6bW1iemJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4NzYyMDYsImV4cCI6MjEwNzQ1MjIwNn0.OyxESot3uehXxCfgWZYgn7t6oZuoP4PrIZAVU6wC0Jc";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser = null;
+    let localRecords = [];
+
+    // 1. XỬ LÝ ĐĂNG NHẬP
+    document.getElementById('formLogin').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+
+      const { data, error } = await supabase
+        .from('users_pcgd')
+        .select('*')
+        .eq('username', u)
+        .eq('password', p)
+        .single();
+
+      if (error || !data) {
+        alert("Sai tên đăng nhập hoặc mật khẩu!");
+        return;
+      }
+
+      currentUser = data;
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      document.getElementById('userBadge').innerText = currentUser.fullname;
+      document.getElementById('villageBadge').innerText = currentUser.assigned_village === 'ALL' ? 'Toàn bộ xã' : currentUser.assigned_village;
+
+      if (currentUser.role === 'admin_xa') {
+        document.getElementById('adminActions').classList.remove('hidden');
+      }
+
+      await loadRecordsFromCloud();
+      listenRealtime();
+    });
+
+    function logout() {
+      location.reload();
+    }
+
+    // 2. TẢI DỮ LIỆU TỪ SUPABASE
+    async function loadRecordsFromCloud() {
+      let query = supabase.from('pcgd_records').select('*').order('id', { ascending: true });
+
+      // Nếu là giáo viên thôn nào thì chỉ tải nhân khẩu thôn đó
+      if (currentUser.role === 'giao_vien' && currentUser.assigned_village !== 'ALL') {
+        query = query.ilike('dia_chi', `%${currentUser.assigned_village}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error(error);
+        alert("Lỗi tải dữ liệu!");
+        return;
+      }
+
+      localRecords = data || [];
+      buildVillageFilter();
+      renderTable();
+      updateStats();
+    }
+
+    // 3. ĐỒNG BỘ THỜI GIAN THỰC (REALTIME)
+    function listenRealtime() {
+      supabase.channel('custom-all-channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'pcgd_records' }, payload => {
+          // Khi có ai đó cập nhật một dòng, tự động cập nhật lại bảng mà không cần tải lại trang
+          if (payload.eventType === 'UPDATE') {
+            const index = localRecords.findIndex(r => r.id === payload.new.id);
+            if (index !== -1) {
+              localRecords[index] = payload.new;
+              renderTable();
+              updateStats();
+            }
+          }
+        })
+        .subscribe();
+    }
+
+    // 4. LÊN LỚP 1 CHẠM & TỰ ĐỘNG LƯU LÊN SUPABASE
+    async function quickPromote(recordId, currentClass) {
+      const currentYear = new Date().getFullYear();
+      let newClass = currentClass;
+      let updates = {};
+
+      if (currentClass === "Lớp 1") newClass = "Lớp 2";
+      else if (currentClass === "Lớp 2") newClass = "Lớp 3";
+      else if (currentClass === "Lớp 3") newClass = "Lớp 4";
+      else if (currentClass === "Lớp 4") newClass = "Lớp 5";
+      else if (currentClass === "Lớp 5") {
+        newClass = "Lớp 6";
+        updates.khoi_hoc = "THCS";
+        updates.bac_tot_nghiep = "Tiểu học";
+        updates.nam_tot_nghiep = currentYear;
+      }
+      else if (currentClass === "Lớp 6") newClass = "Lớp 7";
+      else if (currentClass === "Lớp 7") newClass = "Lớp 8";
+      else if (currentClass === "Lớp 8") newClass = "Lớp 9";
+      else if (currentClass === "Lớp 9") {
+        newClass = "Đã tốt nghiệp";
+        updates.bac_tot_nghiep = "THCS";
+        updates.nam_tot_nghiep = currentYear;
+      }
+
+      updates.lop_hoc = newClass;
+      updates.updated_by = currentUser.fullname;
+
+      // Cập nhật ngay trên Cloud
+      const { error } = await supabase.from('pcgd_records').update(updates).eq('id', recordId);
+      if (error) alert("Lỗi cập nhật máy chủ!");
+      else {
+        const item = localRecords.find(r => r.id === recordId);
+        if (item) Object.assign(item, updates);
+        renderTable();
+        updateStats();
+      }
+    }
+
+    // Cập nhật trạng thái cư trú
+    async function toggleResidence(recordId, currentStatus) {
+      const nextStatus = currentStatus === "Có mặt" ? "Vắng mặt" : (currentStatus === "Vắng mặt" ? "Chuyển đi" : "Có mặt");
+      const { error } = await supabase.from('pcgd_records').update({ tinh_trang_cu_tru: nextStatus, updated_by: currentUser.fullname }).eq('id', recordId);
+      if (!error) {
+        const item = localRecords.find(r => r.id === recordId);
+        if (item) item.tinh_trang_cu_tru = nextStatus;
+        renderTable();
+        updateStats();
+      }
+    }
+
+    // 5. HIỂN THỊ DANH SÁCH
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const village = document.getElementById('filterVillage').value;
+      const cls = document.getElementById('filterClass').value;
+
+      const filtered = localRecords.filter(r => {
+        const fullName = ((r.ho_dem || "") + " " + (r.ten || "")).toLowerCase();
+        const chuHo = ((r.chu_ho_ho_dem || "") + " " + (r.chu_ho_ten || "")).toLowerCase();
+        const diaChi = (r.dia_chi || "").toLowerCase();
+
+        const matchSearch = !search || fullName.includes(search) || chuHo.includes(search) || diaChi.includes(search);
+        const matchVillage = !village || (r.dia_chi || "").includes(village);
+        const matchClass = !cls || (cls === "Mầm non" ? ["Nhà trẻ","Mẫu giáo","3 tuổi","4 tuổi","5 tuổi"].includes(r.lop_hoc) : r.lop_hoc === cls);
+
+        return matchSearch && matchVillage && matchClass;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-12 text-slate-400">Không có dữ liệu phù hợp.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((r, idx) => {
+        const cuTru = r.tinh_trang_cu_tru || "Có mặt";
+        const isAbsent = cuTru !== "Có mặt";
+        const rowBg = isAbsent ? "bg-amber-50/70" : "hover:bg-blue-50/40";
+
+        return `
+          <tr class="${rowBg} border-b border-slate-200 transition">
+            <td class="px-2 py-2 text-center font-mono text-slate-400 sticky-col-1 ${isAbsent ? 'bg-amber-50' : 'bg-white'}">${idx + 1}</td>
+            <td class="px-3 py-2 font-bold text-slate-800 sticky-col-2 ${isAbsent ? 'bg-amber-50' : 'bg-white'}">${r.ho_dem || ''} ${r.ten || ''}</td>
+            <td class="px-2 py-2 text-center">${r.nam_sinh || ''}</td>
+            <td class="px-2 py-2 text-center text-slate-500">${r.nu || ''}</td>
+            <td class="px-3 py-2 text-slate-600 truncate max-w-[120px]">${r.chu_ho_ho_dem || ''} ${r.chu_ho_ten || ''}</td>
+            <td class="px-3 py-2 text-slate-500 text-[11px] truncate max-w-[160px]" title="${r.dia_chi || ''}">${r.dia_chi || ''}</td>
+            <td class="px-3 py-2 text-center font-bold text-indigo-700">${r.lop_hoc || 'Chưa học'}</td>
+            <td class="px-2 py-2 text-center">
+              <button onclick="quickPromote(${r.id}, '${r.lop_hoc}')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-bold transition">+1 Lớp</button>
+            </td>
+            <td class="px-3 py-2">${r.ma_truong || '-'}</td>
+            <td class="px-3 py-2 text-center">
+              <button onclick="toggleResidence(${r.id}, '${cuTru}')" class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                cuTru === 'Có mặt' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' :
+                cuTru === 'Vắng mặt' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                'bg-rose-100 text-rose-800 border-rose-300'
+              }">● ${cuTru}</button>
+            </td>
+            <td class="px-3 py-2">${r.ho_ten_cha_me || ''}</td>
+            <td class="px-3 py-2 font-mono text-slate-600">${r.dien_thoai || ''}</td>
+            <td class="px-3 py-2 text-slate-500 text-[11px]">${r.ghi_chu || ''}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function buildVillageFilter() {
+      const select = document.getElementById('filterVillage');
+      const villages = new Set();
+      localRecords.forEach(r => {
+        if (r.dia_chi) {
+          const m = r.dia_chi.match(/(Thôn\s+[^\,\-]+|Tổ\s+[^\,\-]+|Bản\s+[^\,\-]+|Xóm\s+[^\,\-]+)/i);
+          if (m) villages.add(m[0].trim());
+        }
+      });
+      select.innerHTML = '<option value="">-- Tất cả Thôn/Bản --</option>' + 
+        Array.from(villages).map(v => `<option value="${v}">${v}</option>`).join('');
+    }
+
+    function updateStats() {
+      document.getElementById('statTotal').innerText = localRecords.length;
+      document.getElementById('statMN').innerText = localRecords.filter(r => ["Nhà trẻ","Mẫu giáo","3 tuổi","4 tuổi","5 tuổi"].includes(r.lop_hoc)).length;
+      document.getElementById('statTH').innerText = localRecords.filter(r => ["Lớp 1","Lớp 2","Lớp 3","Lớp 4","Lớp 5"].includes(r.lop_hoc)).length;
+      document.getElementById('statTHCS').innerText = localRecords.filter(r => ["Lớp 6","Lớp 7","Lớp 8","Lớp 9"].includes(r.lop_hoc)).length;
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderTable);
+    document.getElementById('filterVillage').addEventListener('change', renderTable);
+    document.getElementById('filterClass').addEventListener('change', renderTable);
+  </script>
+</body>
+</html>
