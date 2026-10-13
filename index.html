@@ -3,105 +3,124 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống PCGD - Trường Tiểu Học Văn Phú (Đồng Bộ Đám Mây)</title>
-  <!-- Tailwind CSS -->
+  <title>Hệ Thống PCGD - Trường Tiểu Học Văn Phú (Đồng Bộ Đám Mây Chuẩn 51 Cột)</title>
+  
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- SheetJS xử lý file Excel chuẩn 51 cột của Bộ GD&ĐT -->
+  
+  <!-- SheetJS xử lý nạp/xuất file Excel chuẩn Bộ GD&ĐT -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-  <!-- Firebase SDK (Đồng bộ thời gian thực cho nhiều người truy cập) -->
+  <!-- Firebase SDK Compat v9 (Hỗ trợ Realtime Database đồng bộ đám mây) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <style>
-    ::-webkit-scrollbar { height: 9px; width: 9px; }
+    /* Thanh cuộn tối ưu thẩm mỹ */
+    ::-webkit-scrollbar { height: 8px; width: 8px; }
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
 
-    /* Cố định các cột đầu theo đúng thứ tự gốc: Tác vụ -> TT -> Họ đệm -> Tên */
-    .sticky-act   { position: sticky; left: 0px;   z-index: 20; min-width: 76px;  max-width: 76px; }
-    .sticky-tt    { position: sticky; left: 76px;  z-index: 20; min-width: 44px;  max-width: 44px; }
-    .sticky-hodem { position: sticky; left: 120px; z-index: 20; min-width: 110px; max-width: 110px; }
-    .sticky-ten   { position: sticky; left: 230px; z-index: 20; min-width: 85px;  max-width: 85px; }
+    /* Cố định các cột đầu chuẩn quy cách: Tác vụ -> TT -> Họ đệm -> Tên */
+    .sticky-act   { position: sticky; left: 0px;   z-index: 20; min-width: 80px;  max-width: 80px; }
+    .sticky-tt    { position: sticky; left: 80px;  z-index: 20; min-width: 46px;  max-width: 46px; }
+    .sticky-hodem { position: sticky; left: 126px; z-index: 20; min-width: 116px; max-width: 116px; }
+    .sticky-ten   { position: sticky; left: 242px; z-index: 20; min-width: 90px;  max-width: 90px; }
 
     th.sticky-act, th.sticky-tt, th.sticky-hodem, th.sticky-ten { z-index: 35 !important; }
 
+    /* Ô Excel chỉnh sửa trực tiếp */
     .excel-cell:focus {
       outline: 2px solid #2563eb;
       background-color: #eff6ff;
+      border-radius: 2px;
     }
+
+    /* Hiệu ứng mượt mà */
+    .transition-all-fast { transition: all 0.15s ease-in-out; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans select-text">
+
+  <!-- Toast thông báo nổi thay thế alert() -->
+  <div id="toastContainer" class="fixed top-3 right-3 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- ==================== 1. THANH ĐIỀU HÀNH CHÍNH ==================== -->
-  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
-    <div class="max-w-full px-4 py-2 flex flex-wrap justify-between items-center gap-2">
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-full px-3 py-2 flex flex-wrap justify-between items-center gap-2">
+      
+      <!-- Tiêu đề & Trạng thái đồng bộ -->
       <div class="flex items-center gap-2.5">
-        <span class="text-2xl">🏫</span>
+        <span class="text-2xl p-1 bg-slate-800 rounded-lg">🏫</span>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-sm font-bold tracking-wide uppercase">CÔNG CỤ ĐIỀU HÀNH & RÀ SOÁT PCGD - TRƯỜNG TH VĂN PHÚ</h1>
-            <span id="syncBadge" class="bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Đồng bộ đám mây
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xs sm:text-sm font-bold tracking-wide uppercase text-slate-100">
+              ĐIỀU HÀNH & RÀ SOÁT PCGD - TRƯỜNG TH VĂN PHÚ
+            </h1>
+            <!-- Huy hiệu đồng bộ đám mây động -->
+            <span id="syncStatusBadge" class="bg-slate-800 text-amber-300 border border-amber-500/40 text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1.5 transition-all">
+              <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              <span id="syncStatusText">Đang kết nối mây...</span>
             </span>
           </div>
-          <p class="text-[11px] text-slate-400">Tự động gom hộ theo số phiếu • Lọc dữ liệu trên từng cột • Dữ liệu tự động lưu cho tất cả người dùng</p>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Đồng bộ tự động máy tính & điện thoại • Tự gom hộ • Lọc 51 cột chuẩn Bộ GD&ĐT</p>
         </div>
       </div>
 
+      <!-- Cụm nút tác vụ nhanh -->
       <div class="flex items-center gap-1.5 flex-wrap">
-        <button onclick="openNewSheetModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded font-bold shadow transition flex items-center gap-1">
-          <span>➕</span> Thêm Phiếu Mới
+        <button onclick="openNewSheetModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1.5 rounded font-bold shadow transition flex items-center gap-1" title="Thêm một hộ gia đình mới">
+          <span>➕</span> <span class="hidden md:inline">Thêm</span> Phiếu Mới
         </button>
 
-        <button onclick="sortHouseholdOrder(true)" class="bg-blue-700 hover:bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1" title="Xếp tất cả thành viên có cùng số phiếu đứng liền cạnh nhau">
-          <span>🗂️</span> Xếp Gom Hộ
+        <button onclick="sortHouseholdOrder(true)" class="bg-blue-700 hover:bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1" title="Gom tất cả nhân khẩu cùng số phiếu đứng cạnh nhau">
+          <span>🗂️</span> Gom Hộ
         </button>
 
-        <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1.5 rounded cursor-pointer font-semibold shadow transition flex items-center gap-1">
-          <span>📂</span> Nạp Excel (.xlsx)
+        <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1.5 rounded cursor-pointer font-semibold shadow transition flex items-center gap-1" title="Nạp dữ liệu từ file Excel chuẩn Bộ">
+          <span>📂</span> Nạp Excel
           <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
         </label>
 
-        <button onclick="generateSampleData()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1">
+        <button onclick="generateSampleData()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1" title="Tạo dữ liệu thử nghiệm để kiểm tra">
           <span>🧪</span> Mẫu thử
         </button>
 
-        <button id="btnBulkPromote" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1">
-          <span>🚀</span> Lên lớp loạt (+1)
+        <button id="btnBulkPromote" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1" title="Lên 1 lớp cho toàn bộ học sinh">
+          <span>🚀</span> Lên lớp loạt
         </button>
 
-        <button onclick="toggleSummaryModal()" class="bg-purple-700 hover:bg-purple-600 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1">
-          <span>📊</span> Tổng số liệu
+        <button onclick="toggleSummaryModal()" class="bg-purple-700 hover:bg-purple-600 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1" title="Xem thống kê theo từng thôn bản">
+          <span>📊</span> Thống kê
         </button>
 
-        <button id="btnExportExcel" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1">
-          <span>💾</span> Xuất Excel nộp Bộ
+        <button id="btnExportExcel" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2.5 py-1.5 rounded font-semibold shadow transition flex items-center gap-1" title="Xuất file Excel 51 cột nộp Phòng GD">
+          <span>💾</span> Xuất Excel
         </button>
 
-        <button onclick="toggleViewMode()" id="btnViewMode" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-2.5 py-1.5 rounded transition flex items-center gap-1">
-          <span>📱</span> Xem dạng Thẻ
+        <button onclick="toggleViewMode()" id="btnViewMode" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-2.5 py-1.5 rounded transition flex items-center gap-1" title="Chuyển chế độ xem cho điện thoại">
+          <span>📱</span> Dạng Thẻ
         </button>
 
-        <button onclick="clearAllData()" class="bg-rose-700 hover:bg-rose-600 text-white text-xs px-2 py-1.5 rounded transition" title="Làm mới">
-          Làm mới
+        <button onclick="confirmClearAllData()" class="bg-rose-700 hover:bg-rose-600 text-white text-xs px-2 py-1.5 rounded transition" title="Làm mới toàn bộ dữ liệu">
+          🗑️
         </button>
       </div>
     </div>
   </header>
 
   <!-- ==================== 2. THANH CẤP HỌC & BÀN GIAO ==================== -->
-  <div class="bg-slate-800 text-slate-200 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs border-t border-slate-700">
+  <div class="bg-slate-800 text-slate-200 px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs border-t border-slate-700">
     <div class="flex items-center gap-1.5 flex-wrap">
-      <span class="text-[11px] font-semibold text-slate-400 uppercase mr-1">Chế độ xem:</span>
+      <span class="text-[11px] font-semibold text-slate-400 uppercase mr-1">Bộ lọc cấp học:</span>
       
       <button onclick="setSchoolRole('TH')" id="roleBtn-TH" class="role-btn px-2.5 py-1 rounded font-bold bg-blue-600 text-white shadow-sm transition">
-        🎒 Trường TH Văn Phú (Lớp 1 - 5)
+        🎒 Tiểu học Văn Phú (Lớp 1 - 5)
       </button>
 
       <button onclick="setSchoolRole('ALL')" id="roleBtn-ALL" class="role-btn px-2.5 py-1 rounded font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition">
-        🏛️ Toàn Xã (Mầm non - TH - THCS)
+        🏛️ Toàn Xã (0 - 15 tuổi)
       </button>
 
       <button onclick="setSchoolRole('MN')" id="roleBtn-MN" class="role-btn px-2.5 py-1 rounded font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition">
@@ -113,40 +132,42 @@
       </button>
     </div>
 
+    <!-- Nút bàn giao liên cấp tự động -->
     <div class="flex items-center gap-2">
-      <button onclick="handoverMNtoTH()" class="bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] px-2 py-1 rounded shadow transition">
-        🤝 Nhận bàn giao 5 tuổi ➔ Lớp 1
+      <button onclick="handoverMNtoTH()" class="bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] px-2 py-1 rounded shadow transition" title="Tự động nhận trẻ 5 tuổi vào Lớp 1">
+        🤝 Nhận 5 tuổi ➔ Lớp 1
       </button>
-      <button onclick="handoverTHtoTHCS()" class="bg-teal-700 hover:bg-teal-600 text-white text-[11px] px-2 py-1 rounded shadow transition">
+      <button onclick="handoverTHtoTHCS()" class="bg-teal-700 hover:bg-teal-600 text-white text-[11px] px-2 py-1 rounded shadow transition" title="Tự động chuyển học sinh Lớp 5 sang Lớp 6">
         🤝 Bàn giao Lớp 5 ➔ Lớp 6 THCS
       </button>
     </div>
   </div>
 
-  <!-- ==================== 3. THANH THỐNG KÊ NHANH & NÚT XÓA LỌC ==================== -->
-  <div class="bg-white border-b px-4 py-2 flex flex-wrap justify-between items-center gap-2 text-xs shadow-sm">
+  <!-- ==================== 3. THANH THỐNG KÊ NHANH & LỌC CỘT ==================== -->
+  <div class="bg-white border-b px-3 py-1.5 flex flex-wrap justify-between items-center gap-2 text-xs shadow-sm">
     <div class="flex items-center gap-2 flex-wrap">
       <span class="font-bold text-slate-700">Bộ lọc cột:</span>
-      <span class="text-slate-500 text-[11px]">(Gõ từ khóa vào ô lọc ngay dưới tiêu đề từng cột để tìm kiếm)</span>
-      <button onclick="resetAllColumnFilters()" class="text-rose-600 hover:text-rose-800 font-semibold px-2 py-0.5 rounded border border-rose-200 hover:bg-rose-50 transition ml-2 text-[11px]">
-        🔄 Xóa toàn bộ lọc cột
+      <span class="text-slate-500 text-[11px] hidden sm:inline">(Gõ vào ô dưới tiêu đề cột để lọc nhanh không dấu)</span>
+      <button onclick="resetAllColumnFilters()" class="text-rose-600 hover:text-rose-800 font-semibold px-2 py-0.5 rounded border border-rose-200 hover:bg-rose-50 transition text-[11px]">
+        🔄 Xóa bộ lọc
       </button>
     </div>
 
-    <!-- Thanh tổng số liệu -->
-    <div class="flex items-center gap-3 text-slate-600 font-medium bg-slate-50 border rounded-lg px-3 py-1">
-      <div>Đang hiển thị: <b id="statFiltered" class="text-blue-600 font-bold">0</b> / <span id="statTotalAll">0</span></div>
-      <div>Học nơi khác: <b id="statOutDistrict" class="text-sky-600">0</b></div>
-      <div>Học nhờ: <b id="statGuest" class="text-amber-600">0</b></div>
-      <div>Khuyết tật: <b id="statDisability" class="text-purple-600">0</b></div>
-      <div>Vắng/Chuyển: <b id="statAbsent" class="text-rose-600">0</b></div>
+    <!-- Các thẻ đếm nhanh -->
+    <div class="flex items-center gap-2 text-slate-600 font-medium bg-slate-50 border rounded-lg px-2.5 py-1 text-[11px] flex-wrap">
+      <div>Hiển thị: <b id="statFiltered" class="text-blue-600 font-bold">0</b> / <span id="statTotalAll">0</span></div>
+      <div class="border-l pl-2">Học nơi khác: <b id="statOutDistrict" class="text-sky-600 font-bold">0</b></div>
+      <div class="border-l pl-2">Học nhờ: <b id="statGuest" class="text-amber-600 font-bold">0</b></div>
+      <div class="border-l pl-2">Khuyết tật: <b id="statDisability" class="text-purple-600 font-bold">0</b></div>
+      <div class="border-l pl-2">Vắng/Chuyển: <b id="statAbsent" class="text-rose-600 font-bold">0</b></div>
     </div>
   </div>
 
-  <!-- ==================== 4. BẢNG HIỂN THỊ CHÍNH (CÓ HÀNG LỌC TỪNG CỘT) ==================== -->
+  <!-- ==================== 4. BẢNG HIỂN THỊ CHÍNH (51 CỘT CHUẨN) ==================== -->
   <main class="flex-1 overflow-hidden p-2 flex flex-col">
-    <!-- BẢNG TÍNH 51 CỘT (MÁY TÍNH) -->
-    <div id="tableViewContainer" class="bg-white rounded-lg border border-slate-300 shadow flex-1 overflow-auto max-h-[calc(100vh-190px)] relative">
+    
+    <!-- KHUNG BẢNG TÍNH EXCEL (Dành cho máy tính bàn, Laptop) -->
+    <div id="tableViewContainer" class="bg-white rounded-lg border border-slate-300 shadow flex-1 overflow-auto max-h-[calc(100vh-185px)] relative">
       <table class="w-full text-left text-[11px] border-collapse whitespace-nowrap">
         <thead class="bg-slate-200 text-slate-700 uppercase font-bold sticky top-0 z-30 select-none border-b border-slate-300">
           <tr id="tableHeaderRow" class="divide-x divide-slate-300"></tr>
@@ -155,20 +176,20 @@
         <tbody id="tableBody" class="divide-y divide-slate-200 font-normal">
           <tr>
             <td colspan="52" class="text-center py-24 text-slate-400 text-sm">
-              Đang tải dữ liệu từ máy chủ đám mây...
+              <div class="inline-block animate-spin mr-2">🔄</div> Đang tải và kiểm tra dữ liệu đám mây...
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- THẺ TRỰC QUAN (ĐIỆN THOẠI) -->
-    <div id="cardViewContainer" class="hidden flex-1 overflow-y-auto max-h-[calc(100vh-190px)] p-2">
+    <!-- KHUNG THẺ TRỰC QUAN (Tối ưu cho điện thoại khi đi điều tra thực địa) -->
+    <div id="cardViewContainer" class="hidden flex-1 overflow-y-auto max-h-[calc(100vh-185px)] p-1">
       <div id="cardGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
     </div>
 
-    <!-- PHÂN TRANG -->
-    <div class="mt-2 flex flex-wrap justify-between items-center text-xs text-slate-600 px-2">
+    <!-- PHÂN TRANG & SỐ LƯỢNG DÒNG -->
+    <div class="mt-2 flex flex-wrap justify-between items-center text-xs text-slate-600 px-1 gap-2">
       <div class="flex items-center gap-2">
         <span>Hiển thị:</span>
         <select id="pageSizeSelect" class="border rounded px-2 py-0.5 bg-white text-xs">
@@ -178,25 +199,25 @@
           <option value="500">500 dòng</option>
           <option value="100000">Tất cả</option>
         </select>
-        <span>(Tìm thấy: <b id="lblFilteredCount">0</b> đối tượng)</span>
+        <span>(Khớp điều kiện: <b id="lblFilteredCount" class="text-blue-700">0</b> đối tượng)</span>
       </div>
 
       <div class="flex items-center gap-2">
-        <button id="btnPrevPage" class="border rounded px-2.5 py-1 bg-white hover:bg-slate-50 disabled:opacity-40">◀ Trang trước</button>
+        <button id="btnPrevPage" class="border rounded px-2.5 py-1 bg-white hover:bg-slate-50 disabled:opacity-40 transition">◀ Trang trước</button>
         <span>Trang <b id="lblCurrentPage">1</b> / <b id="lblTotalPages">1</b></span>
-        <button id="btnNextPage" class="border rounded px-2.5 py-1 bg-white hover:bg-slate-50 disabled:opacity-40">Trang sau ▶</button>
+        <button id="btnNextPage" class="border rounded px-2.5 py-1 bg-white hover:bg-slate-50 disabled:opacity-40 transition">Trang sau ▶</button>
       </div>
     </div>
   </main>
 
-  <!-- ==================== 5. MODAL: XEM & THÊM THÀNH VIÊN TRỰC TIẾP VÀO SỐ PHIẾU ==================== -->
+  <!-- ==================== 5. MODAL: XEM & THÊM NHANH VÀO HỘ ==================== -->
   <div id="modalHousehold" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-3">
-    <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl overflow-y-auto max-h-[92vh]">
+    <div class="bg-white rounded-2xl max-w-4xl w-full p-5 shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center border-b pb-3 mb-3">
         <div class="flex items-center gap-2">
           <span class="text-2xl">🏡</span>
           <div>
-            <h2 class="text-base font-bold text-slate-800 uppercase">
+            <h2 class="text-sm sm:text-base font-bold text-slate-800 uppercase">
               HỘ GIA ĐÌNH - SỐ PHIẾU: <span id="hhModalSheetNo" class="text-indigo-700 font-extrabold"></span>
             </h2>
             <p class="text-xs text-slate-500">
@@ -206,10 +227,10 @@
             </p>
           </div>
         </div>
-        <button onclick="closeHouseholdModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+        <button onclick="closeHouseholdModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1">&times;</button>
       </div>
 
-      <!-- Danh sách thành viên hiện có trong hộ -->
+      <!-- Danh sách thành viên trong hộ -->
       <div class="mb-4">
         <h3 class="text-xs font-bold text-slate-700 uppercase mb-2">
           1. Danh sách nhân khẩu hiện có trong hộ (<span id="hhModalCount" class="text-blue-600">0</span> người)
@@ -227,7 +248,7 @@
                 <th class="p-2 text-center w-28">Lớp / Trường học</th>
                 <th class="p-2 text-center w-24">Cư trú</th>
                 <th class="p-2 text-center w-28">Đặc thù</th>
-                <th class="p-2 text-center w-16">Thao tác</th>
+                <th class="p-2 text-center w-16">Sửa</th>
               </tr>
             </thead>
             <tbody id="hhModalTbody" class="divide-y divide-slate-100 text-[11px]"></tbody>
@@ -235,10 +256,10 @@
         </div>
       </div>
 
-      <!-- KHU VỰC THÊM TRỰC TIẾP THÀNH VIÊN VÀO HỘ NÀY -->
+      <!-- Khu vực thêm nhanh thành viên mới vào đúng số phiếu -->
       <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3.5 mb-2">
         <h3 class="text-xs font-bold text-blue-900 uppercase mb-2 flex items-center gap-1">
-          <span>➕</span> 2. Thêm nhanh thành viên mới vào Hộ này
+          <span>➕</span> 2. Thêm nhanh con / người trong hộ này
         </h3>
         
         <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
@@ -272,7 +293,7 @@
           <div class="md:col-span-2">
             <label class="block font-semibold text-slate-600 mb-0.5">Nơi học</label>
             <select id="hhNewStudyType" class="w-full border rounded p-1.5 bg-white">
-              <option value="LOCAL">Tại trường TH Văn Phú</option>
+              <option value="LOCAL">Tại TH Văn Phú</option>
               <option value="OUT">Học nơi khác (Ngoài xã)</option>
               <option value="GUEST">Học sinh học nhờ</option>
             </select>
@@ -286,14 +307,14 @@
           </div>
           <div class="md:col-span-3 flex items-end">
             <button onclick="saveMemberIntoHousehold()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded text-xs shadow transition flex items-center justify-center gap-1">
-              <span>💾</span> Thêm Vào Hộ & Cập Nhật Lên Mây
+              <span>💾</span> Thêm Vào Hộ & Lưu Lên Mây
             </button>
           </div>
         </div>
       </div>
 
       <div class="flex justify-end gap-2 border-t pt-3">
-        <button onclick="closeHouseholdModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs">
+        <button onclick="closeHouseholdModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs transition">
           Đóng
         </button>
       </div>
@@ -302,21 +323,22 @@
 
   <!-- ==================== 6. MODAL: SỬA CHI TIẾT THÔNG TIN HỌC SINH ==================== -->
   <div id="modalEditStudent" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-3">
-    <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl overflow-y-auto max-h-[92vh]">
+    <div class="bg-white rounded-2xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center border-b pb-3 mb-4">
         <div class="flex items-center gap-2">
           <span class="text-2xl">✏️</span>
           <div>
-            <h2 class="text-base font-bold text-slate-800">Chỉnh Sửa Thông Tin Học Sinh & Nhân Khẩu</h2>
-            <p class="text-[11px] text-slate-400">Cập nhật đúng vị trí các trường theo mẫu Bộ GD&ĐT</p>
+            <h2 class="text-base font-bold text-slate-800">Chỉnh Sửa Chi Tiết Nhân Khẩu & Học Sinh</h2>
+            <p class="text-[11px] text-slate-400">Chuẩn 51 cột theo quy định Bộ GD&ĐT</p>
           </div>
         </div>
-        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1">&times;</button>
       </div>
 
       <input type="hidden" id="editRowIdx">
 
       <div class="space-y-4 text-xs">
+        <!-- Nhóm A: Cá nhân & Số phiếu -->
         <div class="bg-slate-50 border rounded-xl p-3">
           <h3 class="font-bold text-slate-700 uppercase mb-2 text-[11px]">A. Thông tin cá nhân & Số phiếu</h3>
           <div class="grid grid-cols-2 md:grid-cols-6 gap-2.5">
@@ -337,7 +359,7 @@
               <input type="number" id="edYear" class="w-full border rounded p-1.5 text-center font-bold focus:outline-blue-500">
             </div>
             <div>
-              <label class="block font-semibold text-slate-600 mb-1">Ngày / Tháng</label>
+              <label class="block font-semibold text-slate-600 mb-1">Ngày / Tháng sinh</label>
               <div class="flex gap-1">
                 <input type="number" id="edDay" placeholder="Ngày" class="w-1/2 border rounded p-1.5 text-center">
                 <input type="number" id="edMonth" placeholder="Tháng" class="w-1/2 border rounded p-1.5 text-center">
@@ -365,8 +387,9 @@
           </div>
         </div>
 
+        <!-- Nhóm B: Hộ gia đình -->
         <div class="bg-slate-50 border rounded-xl p-3">
-          <h3 class="font-bold text-slate-700 uppercase mb-2 text-[11px]">B. Hộ gia đình & Cư trú</h3>
+          <h3 class="font-bold text-slate-700 uppercase mb-2 text-[11px]">B. Thông tin hộ gia đình & Cư trú</h3>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             <div>
               <label class="block font-semibold text-slate-600 mb-1">Chủ hộ: Họ đệm</label>
@@ -377,7 +400,7 @@
               <input type="text" id="edHeadFirst" class="w-full border rounded p-1.5 font-semibold">
             </div>
             <div class="md:col-span-2">
-              <label class="block font-semibold text-slate-600 mb-1">Địa chỉ (Số nhà, thôn, xóm)</label>
+              <label class="block font-semibold text-slate-600 mb-1">Địa chỉ (Thôn, xóm, số nhà)</label>
               <input type="text" id="edAddress" class="w-full border rounded p-1.5">
             </div>
             <div>
@@ -403,9 +426,10 @@
           </div>
         </div>
 
+        <!-- Nhóm C: Học tập -->
         <div class="bg-blue-50/60 border border-blue-200 rounded-xl p-3">
           <h3 class="font-bold text-blue-900 uppercase mb-2 text-[11px]">C. Tình trạng học tập & Nơi học</h3>
-          <div class="flex gap-4 p-2 bg-white border rounded-lg mb-2.5">
+          <div class="flex gap-4 p-2 bg-white border rounded-lg mb-2.5 flex-wrap">
             <label class="flex items-center gap-1.5 cursor-pointer">
               <input type="radio" name="edStudyType" value="LOCAL" class="text-blue-600">
               <span class="font-semibold text-slate-700">🏫 Học tại TH Văn Phú</span>
@@ -432,18 +456,19 @@
               </select>
             </div>
             <div>
-              <label class="block font-semibold text-slate-600 mb-1">Lớp học hiện tại</label>
-              <input type="text" id="edClass" placeholder="Lớp 1, 5A2, Lớp 6..." class="w-full border rounded p-1.5 font-bold text-indigo-800">
+              <label class="block font-semibold text-slate-600 mb-1">Lớp học</label>
+              <input type="text" id="edClass" placeholder="Lớp 1, 5A2..." class="w-full border rounded p-1.5 font-bold text-indigo-800">
             </div>
             <div class="md:col-span-2">
-              <label class="block font-semibold text-slate-600 mb-1">Mã trường / Tên trường đang học</label>
+              <label class="block font-semibold text-slate-600 mb-1">Trường học</label>
               <input type="text" id="edSchoolName" placeholder="TH Văn Phú..." class="w-full border rounded p-1.5 font-medium">
             </div>
           </div>
         </div>
 
+        <!-- Nhóm D: Khuyết tật & Ghi chú -->
         <div class="bg-purple-50/60 border border-purple-200 rounded-xl p-3">
-          <h3 class="font-bold text-purple-900 uppercase mb-2 text-[11px]">D. Thông tin Khuyết tật</h3>
+          <h3 class="font-bold text-purple-900 uppercase mb-2 text-[11px]">D. Khuyết tật & Ghi chú đặc thù</h3>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] mb-2.5 bg-white p-2.5 rounded-lg border">
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="edDisVanDong" class="rounded text-purple-600"><span>Vận động</span></label>
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="edDisNgheNoi" class="rounded text-purple-600"><span>Nghe, nói</span></label>
@@ -468,7 +493,7 @@
               <select id="edLearnAbility" class="w-full border rounded p-1.5 bg-white">
                 <option value="Bình thường">Bình thường</option>
                 <option value="Học hòa nhập">Học hòa nhập</option>
-                <option value="Không có khả năng học">Không có khả năng học</option>
+                <option value="Không có khả năng học">Không thể học</option>
               </select>
             </div>
             <div class="md:col-span-2">
@@ -480,15 +505,15 @@
       </div>
 
       <div class="flex justify-end gap-2 border-t pt-3 mt-4">
-        <button onclick="closeEditModal()" class="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50">Hủy</button>
-        <button onclick="saveEditStudent()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md">
+        <button onclick="closeEditModal()" class="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition">Hủy</button>
+        <button onclick="saveEditStudent()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md transition">
           💾 Lưu Cập Nhật Lên Mây
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 7. MODAL: THÊM MỚI SỐ PHIẾU ĐIỀU TRA ==================== -->
+  <!-- ==================== 7. MODAL: THÊM MỚI PHIẾU ĐIỀU TRA ==================== -->
   <div id="modalNewSheet" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-3">
     <div class="bg-white rounded-2xl max-w-3xl w-full p-5 shadow-2xl overflow-y-auto max-h-[92vh]">
       <div class="flex justify-between items-center border-b pb-2.5 mb-3">
@@ -496,14 +521,14 @@
           <span class="text-xl">📋</span>
           <div>
             <h2 class="text-base font-bold text-slate-800">Thêm Mới Phiếu Điều Tra Hộ Gia Đình</h2>
-            <p class="text-[11px] text-slate-400">Nhập thông tin chủ hộ một lần và thêm nhiều nhân khẩu cùng hộ</p>
+            <p class="text-[11px] text-slate-400">Tự động gắn chung số phiếu và địa chỉ cho các con</p>
           </div>
         </div>
-        <button onclick="closeNewSheetModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+        <button onclick="closeNewSheetModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1">&times;</button>
       </div>
 
       <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4">
-        <h3 class="text-xs font-bold text-slate-700 uppercase mb-2">1. Thông tin chung của Phiếu & Chủ hộ</h3>
+        <h3 class="text-xs font-bold text-slate-700 uppercase mb-2">1. Thông tin Chủ hộ & Địa chỉ</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
           <div>
             <label class="block font-semibold text-slate-600 mb-1">Số phiếu *</label>
@@ -527,7 +552,7 @@
           </div>
           <div class="col-span-2">
             <label class="block font-semibold text-slate-600 mb-1">Địa chỉ chi tiết</label>
-            <input type="text" id="mAddress" placeholder="Số nhà, đường..." class="w-full border rounded p-1.5 focus:outline-blue-500">
+            <input type="text" id="mAddress" placeholder="Số nhà, ngõ..." class="w-full border rounded p-1.5 focus:outline-blue-500">
           </div>
         </div>
       </div>
@@ -536,7 +561,7 @@
         <div class="flex justify-between items-center mb-2">
           <h3 class="text-xs font-bold text-slate-700 uppercase">2. Danh sách nhân khẩu / con trong phiếu</h3>
           <button onclick="addMemberRow()" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-2.5 py-1 rounded font-bold transition flex items-center gap-1">
-            <span>➕</span> Thêm người vào hộ
+            <span>➕</span> Thêm người vào phiếu
           </button>
         </div>
 
@@ -560,9 +585,9 @@
       </div>
 
       <div class="flex justify-end gap-2 border-t pt-3">
-        <button onclick="closeNewSheetModal()" class="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50">Hủy</button>
-        <button onclick="saveNewSheet()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-md">
-          💾 Lưu Toàn Bộ Phiếu Lên Mây
+        <button onclick="closeNewSheetModal()" class="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition">Hủy</button>
+        <button onclick="saveNewSheet()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-md transition">
+          💾 Lưu Toàn Bộ Lên Mây
         </button>
       </div>
     </div>
@@ -570,7 +595,7 @@
 
   <!-- ==================== 8. MODAL: BÁO CÁO TỔNG HỢP SỐ LIỆU ==================== -->
   <div id="modalSummary" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-3">
-    <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+    <div class="bg-white rounded-2xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
       <div class="flex justify-between items-center border-b pb-3 mb-4">
         <div class="flex items-center gap-2">
           <span class="text-2xl">📊</span>
@@ -579,7 +604,7 @@
             <p class="text-xs text-slate-400">Trường Tiểu học Văn Phú • Thống kê tự động theo Thôn/Bản</p>
           </div>
         </div>
-        <button onclick="toggleSummaryModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+        <button onclick="toggleSummaryModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1">&times;</button>
       </div>
 
       <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5 mb-5 text-center text-xs">
@@ -625,14 +650,29 @@
       </div>
 
       <div class="flex justify-end">
-        <button onclick="toggleSummaryModal()" class="px-4 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold">Đóng</button>
+        <button onclick="toggleSummaryModal()" class="px-4 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 transition">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL XÁC NHẬN THAO TÁC (Thay thế hoàn toàn confirm()) -->
+  <div id="customConfirmModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+      <div class="text-center mb-4">
+        <div id="confirmIcon" class="text-3xl mb-2">⚠️</div>
+        <h3 id="confirmTitle" class="text-sm font-bold text-slate-800">Xác nhận thao tác</h3>
+        <p id="confirmMessage" class="text-xs text-slate-500 mt-1"></p>
+      </div>
+      <div class="flex justify-center gap-2">
+        <button onclick="resolveConfirm(false)" class="px-4 py-1.5 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">Hủy bỏ</button>
+        <button id="btnConfirmAction" onclick="resolveConfirm(true)" class="px-4 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 transition shadow">Đồng ý</button>
       </div>
     </div>
   </div>
 
   <!-- ==================== 9. LOGIC JAVASCRIPT ==================== -->
   <script>
-    // 1. CẤU HÌNH & KHỞI TẠO FIREBASE DATABASE
+    /* CẤU HÌNH FIREBASE DATABASE CHUẨN CỦA BẠN (DỰ ÁN PCGD-HONGSON) */
     const firebaseConfig = {
       apiKey: "AIzaSyBc5wvmu6r5ebAHpcGByUA4vMLAJq0QLIE",
       authDomain: "pcgd-hongson.firebaseapp.com",
@@ -644,9 +684,10 @@
       measurementId: "G-9SQSX6VB8W"
     };
 
+    // Khởi tạo Firebase SDK
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const dataRef = db.ref('pcgd_data');
+    const dataRef = db.ref('pcgd_data_v2');
 
     // 50 CỘT DỮ LIỆU CHUẨN BỘ GD&ĐT
     const COLUMNS_DEF = [
@@ -702,6 +743,7 @@
       { idx: 50, num: "47", name: "Ghi chú", width: "w-36" }
     ];
 
+    // Trạng thái ứng dụng
     let fullRows = [];
     let originalHeaders = [];
     let currentSchoolRole = "TH";
@@ -710,6 +752,72 @@
     let pageSize = 100;
     let currentViewingHouseholdSheet = "";
     let columnFilters = {};
+    let pendingConfirmCallback = null;
+
+    // Thông báo Toast không chặn luồng
+    function showToast(message, type = "info") {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      const colors = {
+        success: "bg-emerald-600 text-white border-emerald-500",
+        error: "bg-rose-600 text-white border-rose-500",
+        info: "bg-slate-800 text-white border-slate-700",
+        warn: "bg-amber-600 text-white border-amber-500"
+      };
+
+      toast.className = `${colors[type] || colors.info} border px-3 py-2 rounded-lg shadow-xl text-xs font-semibold flex items-center gap-2 pointer-events-auto transform transition-all duration-300 translate-y-2 opacity-0`;
+      toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 20);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Modal thay thế confirm()
+    function showConfirmModal(title, message, callback, btnText = "Đồng ý", isDanger = true) {
+      document.getElementById('confirmTitle').innerText = title;
+      document.getElementById('confirmMessage').innerText = message;
+      const btn = document.getElementById('btnConfirmAction');
+      btn.innerText = btnText;
+      btn.className = isDanger ? "px-4 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 transition shadow" : "px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow";
+      pendingConfirmCallback = callback;
+      document.getElementById('customConfirmModal').classList.remove('hidden');
+    }
+
+    function resolveConfirm(result) {
+      document.getElementById('customConfirmModal').classList.add('hidden');
+      if (pendingConfirmCallback) {
+        pendingConfirmCallback(result);
+        pendingConfirmCallback = null;
+      }
+    }
+
+    function setSyncStatus(state, text) {
+      const badge = document.getElementById('syncStatusBadge');
+      const dot = document.getElementById('syncStatusDot');
+      const lbl = document.getElementById('syncStatusText');
+
+      if (state === 'synced') {
+        badge.className = "bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1.5";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400";
+        lbl.innerText = text || "Đồng bộ đám mây";
+      } else if (state === 'saving') {
+        badge.className = "bg-amber-950/60 text-amber-300 border border-amber-500/50 text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1.5";
+        dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
+        lbl.innerText = text || "Đang lưu lên mây...";
+      } else {
+        badge.className = "bg-rose-950/60 text-rose-300 border border-rose-500/50 text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1.5";
+        dot.className = "w-2 h-2 rounded-full bg-rose-400";
+        lbl.innerText = text || "Mất kết nối";
+      }
+    }
 
     function removeTones(str) {
       if (!str) return '';
@@ -719,46 +827,113 @@
       return str.toLowerCase().trim();
     }
 
-    // 2. KHỞI TẠO BẢNG & LẮNG NGHE ĐỒNG BỘ THỜI GIAN THỰC TỪ FIREBASE
+    // Làm sạch dữ liệu, triệt tiêu 100% undefined/null để Firebase không bao giờ từ chối
+    function sanitizeForFirebase(rows) {
+      if (!Array.isArray(rows)) return [];
+      return rows.map((r, rowIdx) => {
+        const rowArr = Array.isArray(r) ? r : Object.values(r || {});
+        const safe = new Array(51).fill("");
+        for (let i = 0; i < 51; i++) {
+          safe[i] = (rowArr[i] === undefined || rowArr[i] === null) ? "" : String(rowArr[i]);
+        }
+        safe[1] = rowIdx + 1; // Đảm bảo số TT luôn chuẩn
+        return safe;
+      });
+    }
+
+    // Chuyển đổi dữ liệu từ Firebase về mảng 2D hoàn chỉnh
+    function parseFirebaseData(rawRows) {
+      if (!rawRows) return [];
+      const list = Array.isArray(rawRows) ? rawRows : Object.values(rawRows);
+      return list.map((item, idx) => {
+        const arr = Array.isArray(item) ? item : Object.values(item || {});
+        const res = new Array(51).fill("");
+        for (let i = 0; i < 51; i++) {
+          res[i] = (arr[i] === undefined || arr[i] === null) ? "" : String(arr[i]);
+        }
+        res[1] = idx + 1;
+        return res;
+      });
+    }
+
+    // LƯU DỮ LIỆU LÊN ĐÁM MÂY (Tự động lưu đệm LocalStorage trước để không mất)
+    let saveTimeout = null;
+    function saveState(immediate = false) {
+      // 1. Lưu ngay vào LocalStorage làm bản sao lưu an toàn
+      try {
+        localStorage.setItem('pcgd_vanphu_cached_rows', JSON.stringify(fullRows));
+        localStorage.setItem('pcgd_vanphu_cached_headers', JSON.stringify(originalHeaders));
+      } catch (e) {
+        console.warn("Không thể lưu LocalStorage:", e);
+      }
+
+      setSyncStatus('saving', 'Đang lưu lên mây...');
+
+      const doSave = () => {
+        const cleanRows = sanitizeForFirebase(fullRows);
+        const cleanHeaders = originalHeaders.map(h => {
+          const arr = Array.isArray(h) ? h : Object.values(h || {});
+          return arr.map(c => (c === undefined || c === null) ? "" : String(c));
+        });
+
+        dataRef.set({
+          fullRows: cleanRows,
+          originalHeaders: cleanHeaders,
+          lastUpdated: Date.now()
+        }).then(() => {
+          setSyncStatus('synced', 'Đã đồng bộ đám mây');
+        }).catch(err => {
+          setSyncStatus('error', 'Lỗi lưu đám mây');
+          showToast("Lỗi lưu đám mây: " + err.message, "error");
+        });
+      };
+
+      if (immediate) {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        doSave();
+      } else {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(doSave, 400); // Debounce giảm tải
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       initHeader();
 
-      // Khi bất kỳ ai thêm/sửa/xóa, sự kiện này tự động kích hoạt trên máy tất cả mọi người
+      // Nạp trước dữ liệu từ LocalStorage để màn hình hiển thị ngay lập tức (không bị trắng)
+      try {
+        const cached = localStorage.getItem('pcgd_vanphu_cached_rows');
+        const cachedHeaders = localStorage.getItem('pcgd_vanphu_cached_headers');
+        if (cached) {
+          fullRows = parseFirebaseData(JSON.parse(cached));
+          if (cachedHeaders) originalHeaders = JSON.parse(cachedHeaders);
+          renderData();
+          updateStats();
+        }
+      } catch (e) {
+        console.warn("Lỗi đọc LocalStorage ban đầu:", e);
+      }
+
+      // LẮNG NGHE ĐỒNG BỘ THỜI GIAN THỰC TỪ FIREBASE
       dataRef.on('value', (snapshot) => {
         const val = snapshot.val();
         if (val && val.fullRows) {
-          fullRows = val.fullRows;
-          originalHeaders = val.originalHeaders || [];
+          fullRows = parseFirebaseData(val.fullRows);
+          originalHeaders = val.originalHeaders ? val.originalHeaders.map(h => Array.isArray(h) ? h : Object.values(h)) : [];
+          setSyncStatus('synced', 'Đã đồng bộ đám mây');
         } else {
           fullRows = [];
           originalHeaders = [];
+          setSyncStatus('synced', 'Đám mây sẵn sàng');
         }
         renderData();
         updateStats();
       }, (error) => {
         console.error("Lỗi kết nối Firebase:", error);
-        alert("Lỗi kết nối cơ sở dữ liệu: " + error.message);
+        setSyncStatus('error', 'Lỗi kết nối');
+        showToast("Lỗi kết nối đám mây: " + error.message, "error");
       });
     });
-
-    // HÀM LƯU DỮ LIỆU LÊN ĐÁM MÂY
-    function saveState() {
-      dataRef.set({
-        fullRows: fullRows,
-        originalHeaders: originalHeaders
-      }).catch(err => {
-        alert("Không thể lưu dữ liệu lên máy chủ: " + err.message);
-      });
-    }
-
-    function clearAllData() {
-      if (confirm("Xóa toàn bộ dữ liệu hiện tại trên hệ thống máy chủ chung? Thao tác này sẽ xóa dữ liệu với tất cả người dùng!")) {
-        dataRef.remove().then(() => {
-          columnFilters = {};
-          alert("Đã làm mới cơ sở dữ liệu chung thành công!");
-        });
-      }
-    }
 
     function initHeader() {
       const trHeader = document.getElementById('tableHeaderRow');
@@ -766,6 +941,7 @@
       trHeader.innerHTML = "";
       trFilter.innerHTML = "";
 
+      // Cột Tác vụ
       const thAct = document.createElement('th');
       thAct.className = "px-1 py-1.5 text-center bg-blue-100 text-blue-900 sticky-act border-r border-slate-300";
       thAct.innerText = "Tác vụ";
@@ -776,6 +952,7 @@
       thActFilter.innerHTML = `<button onclick="resetAllColumnFilters()" title="Xóa tất cả lọc" class="text-[10px] text-rose-600 font-bold hover:underline">Xóa lọc</button>`;
       trFilter.appendChild(thActFilter);
 
+      // 50 cột dữ liệu
       COLUMNS_DEF.forEach(col => {
         let stickyClass = "";
         let bg = "bg-slate-200";
@@ -820,6 +997,7 @@
       });
       currentPage = 1;
       renderData();
+      showToast("Đã xóa tất cả bộ lọc cột", "info");
     }
 
     function sortHouseholdOrder(showMessage = false) {
@@ -836,11 +1014,13 @@
         const comp = pA.localeCompare(pB, undefined, { numeric: true, sensitivity: 'base' });
         if (comp !== 0) return comp;
 
+        // Chủ hộ hoặc bản thân xếp lên đầu
         const relA = removeTones(a[47] || "");
         const relB = removeTones(b[47] || "");
         if (relA.includes("chu ho") || relA.includes("ban than")) return -1;
         if (relB.includes("chu ho") || relB.includes("ban than")) return 1;
 
+        // Xếp theo tuổi từ lớn đến nhỏ
         const yA = parseInt(a[6]) || 9999;
         const yB = parseInt(b[6]) || 9999;
         return yA - yB;
@@ -848,11 +1028,12 @@
 
       fullRows.forEach((r, idx) => { r[1] = idx + 1; });
 
-      saveState();
+      saveState(true);
       renderData();
-      if (showMessage) alert("Đã tự động gom tất cả các thành viên cùng Số phiếu đứng liền cạnh nhau!");
+      if (showMessage) showToast("Đã gom các thành viên cùng Số phiếu đứng cạnh nhau!", "success");
     }
 
+    // TẠO DỮ LIỆU MẪU ĐỂ TEST
     function generateSampleData() {
       const curYear = new Date().getFullYear();
       const sample = [
@@ -882,7 +1063,7 @@
 
       sortHouseholdOrder(false);
       updateStats();
-      alert("Đã tạo mẫu thành công và lưu trực tiếp lên máy chủ đám mây!");
+      showToast("Đã tạo mẫu thành công và lưu lên đám mây!", "success");
     }
 
     document.getElementById('excelFileInput').addEventListener('change', function(e) {
@@ -891,34 +1072,42 @@
 
       const reader = new FileReader();
       reader.onload = function(evt) {
-        const data = new Uint8Array(evt.target.result);
-        const wb = XLSX.read(data, {type: 'array'});
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, {type: 'array'});
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
 
-        if (json.length >= 4) {
-          originalHeaders = json.slice(0, 4);
-          const rawData = json.slice(4);
+          if (json.length >= 4) {
+            originalHeaders = json.slice(0, 4);
+            const rawData = json.slice(4);
 
-          if (rawData.length === 0) {
-            alert("Tệp bạn nạp là 'Phôi trắng' (chưa có học sinh). Hãy bấm '🧪 Mẫu thử' hoặc '➕ Thêm Phiếu Mới'!");
-            fullRows = [];
+            if (rawData.length === 0) {
+              showToast("Tệp nạp là phôi trắng (chưa có học sinh).", "warn");
+              fullRows = [];
+            } else {
+              fullRows = rawData.map(r => {
+                const arr = Array.isArray(r) ? r : Object.values(r || {});
+                while (arr.length < 51) arr.push("");
+                return arr.map(c => c === undefined || c === null ? "" : String(c));
+              });
+              sortHouseholdOrder(false);
+              showToast(`Đã nạp thành công ${fullRows.length} đối tượng lên hệ thống đám mây!`, "success");
+            }
+
+            saveState(true);
+            currentPage = 1;
+            renderData();
+            updateStats();
           } else {
-            fullRows = rawData.map(r => {
-              while (r.length < 51) r.push("");
-              return r;
-            });
-            sortHouseholdOrder(false);
-            alert(`Đã nạp thành công ${fullRows.length} đối tượng lên hệ thống đám mây!`);
+            showToast("Tệp Excel không đúng cấu trúc 51 cột chuẩn Bộ GD&ĐT", "error");
           }
-
-          saveState();
-          currentPage = 1;
-          renderData();
-          updateStats();
+        } catch (err) {
+          showToast("Lỗi khi đọc file Excel: " + err.message, "error");
         }
       };
       reader.readAsArrayBuffer(file);
+      e.target.value = ""; // Reset input
     });
 
     function isStudentOutDistrict(r) {
@@ -987,7 +1176,7 @@
     function renderTableView(pageRows, totalFiltered) {
       const tbody = document.getElementById('tableBody');
       if (totalFiltered === 0) {
-        tbody.innerHTML = `<tr><td colspan="52" class="text-center py-16 text-slate-400 font-medium">Chưa có dữ liệu hoặc không khớp điều kiện lọc.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="52" class="text-center py-20 text-slate-400 font-medium">Chưa có dữ liệu hoặc không khớp điều kiện lọc.</td></tr>`;
         return;
       }
 
@@ -1010,18 +1199,18 @@
           lastSheetNo = currentSheet;
         }
 
-        const hhTint = isAltHousehold ? "bg-slate-50/60" : "bg-white";
-        const rowBg = isMoved ? "bg-rose-50/70" : isAbsent ? "bg-amber-50/70" : hhTint;
+        const hhTint = isAltHousehold ? "bg-slate-50/70" : "bg-white";
+        const rowBg = isMoved ? "bg-rose-50/80" : isAbsent ? "bg-amber-50/80" : hhTint;
         const bgSticky = isMoved ? "bg-rose-50" : isAbsent ? "bg-amber-50" : (isAltHousehold ? "bg-slate-100" : "bg-white");
 
         let html = `
-          <tr class="${rowBg} hover:bg-blue-50/40 transition border-b border-slate-200">
+          <tr class="${rowBg} hover:bg-blue-50/50 transition border-b border-slate-200">
             <td class="px-1 py-1 text-center sticky-act ${bgSticky} border-r border-slate-200">
               <div class="flex items-center justify-center gap-1">
                 <button onclick="openEditModal(${oIdx})" title="Sửa thông tin chi tiết" class="bg-blue-50 hover:bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-blue-300">
                   ✏️
                 </button>
-                <button onclick="quickPromoteOne(${oIdx})" title="Lên 1 lớp" class="bg-emerald-50 hover:bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-300">
+                <button onclick="quickPromoteOne(${oIdx})" title="Lên 1 lớp (+1)" class="bg-emerald-50 hover:bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-300">
                   +1
                 </button>
               </div>
@@ -1110,7 +1299,7 @@
         const isGst = isStudentGuest(r);
         const isDis = isStudentDisabled(r);
 
-        const cardBorder = isMoved ? "border-rose-400 bg-rose-50/30" : isAbsent ? "border-amber-400 bg-amber-50/30" : "border-slate-200 bg-white";
+        const cardBorder = isMoved ? "border-rose-400 bg-rose-50/40" : isAbsent ? "border-amber-400 bg-amber-50/40" : "border-slate-200 bg-white";
 
         return `
           <div class="border rounded-xl p-3 shadow-sm hover:shadow transition ${cardBorder} flex flex-col justify-between text-xs">
@@ -1165,11 +1354,11 @@
     }
 
     function openHouseholdModal(sheetNo) {
-      if (!sheetNo) return alert("Bản ghi này chưa có Số phiếu!");
+      if (!sheetNo) return showToast("Bản ghi này chưa có Số phiếu!", "warn");
       currentViewingHouseholdSheet = sheetNo;
 
       const members = fullRows.map((r, i) => ({ r, oIdx: i })).filter(item => String(item.r[14] || "").trim() === String(sheetNo).trim());
-      if (members.length === 0) return alert("Không tìm thấy thành viên nào cùng số phiếu: " + sheetNo);
+      if (members.length === 0) return showToast("Không tìm thấy thành viên nào cùng số phiếu: " + sheetNo, "warn");
 
       const first = members[0].r;
       document.getElementById('hhModalSheetNo').innerText = sheetNo;
@@ -1217,7 +1406,7 @@
             <td class="p-2 text-[10px] text-slate-500">${m[50] || '-'}</td>
             <td class="p-2 text-center">
               <button onclick="closeHouseholdModal(); openEditModal(${oIdx});" class="bg-blue-50 text-blue-700 border border-blue-300 font-bold px-2 py-0.5 rounded text-[10px] hover:bg-blue-100">
-                ✏️ Sửa
+                ✏️
               </button>
             </td>
           </tr>
@@ -1247,7 +1436,7 @@
       const residence = document.getElementById('hhNewResidence').value;
 
       if (!fName || !bYear) {
-        alert("Vui lòng nhập Tên và Năm sinh của thành viên mới!");
+        showToast("Vui lòng nhập Tên và Năm sinh của thành viên mới!", "warn");
         return;
       }
 
@@ -1275,7 +1464,7 @@
       fullRows.push(newRow);
       sortHouseholdOrder(false);
       openHouseholdModal(currentViewingHouseholdSheet);
-      alert(`Đã thêm thành công em ${lName} ${fName} vào hộ ${currentViewingHouseholdSheet}!`);
+      showToast(`Đã thêm thành công em ${lName} ${fName} vào hộ ${currentViewingHouseholdSheet}!`, "success");
     }
 
     function openEditModal(rowIdx) {
@@ -1386,7 +1575,7 @@
       closeEditModal();
       renderData();
       updateStats();
-      alert(`Đã cập nhật thông tin thành công cho học sinh ${r[2]} ${r[3]}!`);
+      showToast(`Đã cập nhật thông tin em ${r[2]} ${r[3]}!`, "success");
     }
 
     function openNewSheetModal() {
@@ -1436,7 +1625,7 @@
           </select>
         </td>
         <td class="p-1 text-center">
-          <button onclick="this.closest('tr').remove()" class="text-rose-500 hover:text-rose-700 font-bold text-base">&times;</button>
+          <button onclick="this.closest('tr').remove()" class="text-rose-500 hover:text-rose-700 font-bold text-base p-1">&times;</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -1451,13 +1640,13 @@
       const phone = document.getElementById('mPhone').value.trim();
 
       if (!sheetNo || !headFirst || !village) {
-        alert("Vui lòng điền đầy đủ: Số phiếu, Tên chủ hộ và Thôn/Bản!");
+        showToast("Vui lòng điền đầy đủ: Số phiếu, Tên chủ hộ và Thôn/Bản!", "warn");
         return;
       }
 
       const rows = document.querySelectorAll('#memberTableBody tr');
       if (rows.length === 0) {
-        alert("Vui lòng thêm ít nhất một nhân khẩu trong phiếu!");
+        showToast("Vui lòng thêm ít nhất một nhân khẩu trong phiếu!", "warn");
         return;
       }
 
@@ -1503,9 +1692,9 @@
         closeNewSheetModal();
         renderData();
         updateStats();
-        alert(`Đã lưu Phiếu ${sheetNo} với ${addedCount} nhân khẩu lên máy chủ đám mây thành công!`);
+        showToast(`Đã lưu Phiếu ${sheetNo} với ${addedCount} nhân khẩu lên đám mây!`, "success");
       } else {
-        alert("Vui lòng nhập Tên và Năm sinh cho ít nhất một nhân khẩu!");
+        showToast("Vui lòng nhập Tên và Năm sinh cho ít nhất một nhân khẩu!", "warn");
       }
     }
 
@@ -1569,7 +1758,7 @@
       isCardView = !isCardView;
       document.getElementById('tableViewContainer').classList.toggle('hidden', isCardView);
       document.getElementById('cardViewContainer').classList.toggle('hidden', !isCardView);
-      document.getElementById('btnViewMode').innerHTML = isCardView ? '<span>📊</span> Xem dạng Bảng' : '<span>📱</span> Xem dạng Thẻ';
+      document.getElementById('btnViewMode').innerHTML = isCardView ? '<span>📊</span> Dạng Bảng' : '<span>📱</span> Dạng Thẻ';
       renderData();
     }
 
@@ -1592,38 +1781,47 @@
       saveState();
       renderData();
       updateStats();
+      showToast(`Đã lên 1 lớp cho em ${row[2]} ${row[3]}!`, "success");
     }
 
     document.getElementById('btnBulkPromote').addEventListener('click', function() {
-      if (fullRows.length === 0) return alert("Chưa có dữ liệu!");
-      if (!confirm("Tự động tăng 1 lớp cho tất cả học sinh (Lớp 1->2... Lớp 5 chuyển sang THCS)?")) return;
+      if (fullRows.length === 0) return showToast("Chưa có dữ liệu để lên lớp!", "warn");
 
-      const curYear = new Date().getFullYear();
-      let count = 0;
+      showConfirmModal(
+        "Lên Lớp Hàng Loạt (+1)", 
+        "Hệ thống sẽ tự động tăng 1 lớp cho tất cả học sinh (Lớp 1->2... Lớp 5 chuyển sang THCS)?",
+        (confirmed) => {
+          if (!confirmed) return;
+          const curYear = new Date().getFullYear();
+          let count = 0;
 
-      fullRows.forEach(row => {
-        let lop = String(row[18] || "").trim();
-        let changed = false;
+          fullRows.forEach(row => {
+            let lop = String(row[18] || "").trim();
+            let changed = false;
 
-        if (lop.includes("1")) { row[18] = lop.replace("1", "2"); changed = true; }
-        else if (lop.includes("2")) { row[18] = lop.replace("2", "3"); changed = true; }
-        else if (lop.includes("3")) { row[18] = lop.replace("3", "4"); changed = true; }
-        else if (lop.includes("4")) { row[18] = lop.replace("4", "5"); changed = true; }
-        else if (lop.includes("5")) {
-          row[18] = lop.replace("5", "6");
-          row[17] = "THCS";
-          row[22] = "Tiểu học";
-          row[24] = curYear;
-          changed = true;
-        }
+            if (lop.includes("1")) { row[18] = lop.replace("1", "2"); changed = true; }
+            else if (lop.includes("2")) { row[18] = lop.replace("2", "3"); changed = true; }
+            else if (lop.includes("3")) { row[18] = lop.replace("3", "4"); changed = true; }
+            else if (lop.includes("4")) { row[18] = lop.replace("4", "5"); changed = true; }
+            else if (lop.includes("5")) {
+              row[18] = lop.replace("5", "6");
+              row[17] = "THCS";
+              row[22] = "Tiểu học";
+              row[24] = curYear;
+              changed = true;
+            }
 
-        if (changed) count++;
-      });
+            if (changed) count++;
+          });
 
-      saveState();
-      renderData();
-      updateStats();
-      alert(`Đã hoàn tất lên lớp cho ${count} học sinh!`);
+          saveState(true);
+          renderData();
+          updateStats();
+          showToast(`Đã hoàn tất lên lớp cho ${count} học sinh!`, "success");
+        },
+        "Lên lớp ngay",
+        false
+      );
     });
 
     function toggleResidence(rowIdx) {
@@ -1639,13 +1837,15 @@
     }
 
     function updateCell(rowIdx, colIdx, val) {
-      fullRows[rowIdx][colIdx] = val.trim();
-      saveState();
-      updateStats();
+      if (fullRows[rowIdx][colIdx] !== val.trim()) {
+        fullRows[rowIdx][colIdx] = val.trim();
+        saveState();
+        updateStats();
+      }
     }
 
     function handoverMNtoTH() {
-      if (fullRows.length === 0) return alert("Chưa có dữ liệu!");
+      if (fullRows.length === 0) return showToast("Chưa có dữ liệu để bàn giao!", "warn");
       const curYear = new Date().getFullYear();
       let count = 0;
 
@@ -1663,14 +1863,14 @@
       if (count > 0) {
         sortHouseholdOrder(false);
         setSchoolRole('TH');
-        alert(`Đã nhận bàn giao thành công ${count} trẻ 5 tuổi vào Lớp 1 Trường TH Văn Phú!`);
+        showToast(`Đã nhận bàn giao thành công ${count} trẻ 5 tuổi vào Lớp 1 Trường TH Văn Phú!`, "success");
       } else {
-        alert("Không tìm thấy trẻ 5 tuổi phù hợp!");
+        showToast("Không tìm thấy trẻ 5 tuổi phù hợp để nhận bàn giao!", "warn");
       }
     }
 
     function handoverTHtoTHCS() {
-      if (fullRows.length === 0) return alert("Chưa có dữ liệu!");
+      if (fullRows.length === 0) return showToast("Chưa có dữ liệu!", "warn");
       const curYear = new Date().getFullYear();
       let count = 0;
 
@@ -1687,9 +1887,9 @@
 
       if (count > 0) {
         sortHouseholdOrder(false);
-        alert(`Đã bàn giao thành công ${count} học sinh hoàn thành Lớp 5 sang THCS!`);
+        showToast(`Đã bàn giao thành công ${count} học sinh hoàn thành Lớp 5 sang THCS!`, "success");
       } else {
-        alert("Không có học sinh Lớp 5 để bàn giao!");
+        showToast("Không có học sinh Lớp 5 để bàn giao!", "warn");
       }
     }
 
@@ -1732,7 +1932,7 @@
     }
 
     document.getElementById('btnExportExcel').addEventListener('click', function() {
-      if (fullRows.length === 0) return alert("Không có dữ liệu để xuất!");
+      if (fullRows.length === 0) return showToast("Không có dữ liệu để xuất!", "warn");
 
       const exportRows = [];
       if (originalHeaders.length === 4) {
@@ -1748,7 +1948,31 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
       XLSX.writeFile(wb, `Du_Lieu_PCGD_TH_Van_Phu_${new Date().getFullYear()}.xlsx`);
+      showToast("Đã tải xuống file Excel chuẩn 51 cột nộp cấp trên!", "success");
     });
+
+    function confirmClearAllData() {
+      showConfirmModal(
+        "Xóa Toàn Bộ Dữ Liệu", 
+        "Bạn có chắc chắn muốn xóa sạch cơ sở dữ liệu trên đám mây? Thao tác này sẽ áp dụng cho tất cả giáo viên cùng truy cập!", 
+        (confirmed) => {
+          if (!confirmed) return;
+          dataRef.remove().then(() => {
+            localStorage.removeItem('pcgd_vanphu_cached_rows');
+            localStorage.removeItem('pcgd_vanphu_cached_headers');
+            fullRows = [];
+            originalHeaders = [];
+            columnFilters = {};
+            renderData();
+            updateStats();
+            showToast("Đã làm mới cơ sở dữ liệu chung thành công!", "success");
+          }).catch(err => {
+            showToast("Lỗi khi xóa: " + err.message, "error");
+          });
+        },
+        "Xóa dữ liệu"
+      );
+    }
 
     function updateStats() {
       document.getElementById('statOutDistrict').innerText = fullRows.filter(r => isStudentOutDistrict(r)).length;
@@ -1757,6 +1981,7 @@
       document.getElementById('statAbsent').innerText = fullRows.filter(r => !String(r[16] || "Có mặt").toLowerCase().includes("có mặt")).length;
     }
 
+    // Phân trang
     document.getElementById('btnPrevPage').addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderData(); } });
     document.getElementById('btnNextPage').addEventListener('click', () => { currentPage++; renderData(); });
     document.getElementById('pageSizeSelect').addEventListener('change', (e) => { pageSize = parseInt(e.target.value); currentPage = 1; renderData(); });
