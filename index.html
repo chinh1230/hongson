@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống PCGD - Trường Tiểu Học Văn Phú (Lọc Từng Cột & Gom Hộ)</title>
+  <title>Hệ Thống PCGD - Trường Tiểu Học Văn Phú (Đồng Bộ Đám Mây)</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SheetJS xử lý file Excel chuẩn 51 cột của Bộ GD&ĐT -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Firebase SDK (Đồng bộ thời gian thực cho nhiều người truy cập) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <style>
     ::-webkit-scrollbar { height: 9px; width: 9px; }
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
@@ -35,8 +40,13 @@
       <div class="flex items-center gap-2.5">
         <span class="text-2xl">🏫</span>
         <div>
-          <h1 class="text-sm font-bold tracking-wide uppercase">CÔNG CỤ ĐIỀU HÀNH & RÀ SOÁT PCGD - TRƯỜNG TH VĂN PHÚ</h1>
-          <p class="text-[11px] text-slate-400">Tự động gom hộ theo số phiếu • Lọc dữ liệu trên từng cột • Thêm người trực tiếp vào hộ</p>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm font-bold tracking-wide uppercase">CÔNG CỤ ĐIỀU HÀNH & RÀ SOÁT PCGD - TRƯỜNG TH VĂN PHÚ</h1>
+            <span id="syncBadge" class="bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Đồng bộ đám mây
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400">Tự động gom hộ theo số phiếu • Lọc dữ liệu trên từng cột • Dữ liệu tự động lưu cho tất cả người dùng</p>
         </div>
       </div>
 
@@ -135,20 +145,17 @@
 
   <!-- ==================== 4. BẢNG HIỂN THỊ CHÍNH (CÓ HÀNG LỌC TỪNG CỘT) ==================== -->
   <main class="flex-1 overflow-hidden p-2 flex flex-col">
-    
     <!-- BẢNG TÍNH 51 CỘT (MÁY TÍNH) -->
     <div id="tableViewContainer" class="bg-white rounded-lg border border-slate-300 shadow flex-1 overflow-auto max-h-[calc(100vh-190px)] relative">
       <table class="w-full text-left text-[11px] border-collapse whitespace-nowrap">
         <thead class="bg-slate-200 text-slate-700 uppercase font-bold sticky top-0 z-30 select-none border-b border-slate-300">
-          <!-- Hàng 1: Tên cột & Số thứ tự cột chuẩn Bộ -->
           <tr id="tableHeaderRow" class="divide-x divide-slate-300"></tr>
-          <!-- Hàng 2: Bộ lọc trực tiếp trên từng cột -->
           <tr id="tableFilterRow" class="divide-x divide-slate-300 bg-slate-100 font-normal"></tr>
         </thead>
         <tbody id="tableBody" class="divide-y divide-slate-200 font-normal">
           <tr>
             <td colspan="52" class="text-center py-24 text-slate-400 text-sm">
-              Chưa có dữ liệu. Hãy bấm <b>"📂 Nạp Excel (.xlsx)"</b> hoặc bấm <b>"🧪 Mẫu thử"</b> để kiểm tra ngay.
+              Đang tải dữ liệu từ máy chủ đám mây...
             </td>
           </tr>
         </tbody>
@@ -279,7 +286,7 @@
           </div>
           <div class="md:col-span-3 flex items-end">
             <button onclick="saveMemberIntoHousehold()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded text-xs shadow transition flex items-center justify-center gap-1">
-              <span>💾</span> Thêm Vào Hộ & Cập Nhật Bảng
+              <span>💾</span> Thêm Vào Hộ & Cập Nhật Lên Mây
             </button>
           </div>
         </div>
@@ -475,7 +482,7 @@
       <div class="flex justify-end gap-2 border-t pt-3 mt-4">
         <button onclick="closeEditModal()" class="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50">Hủy</button>
         <button onclick="saveEditStudent()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-md">
-          💾 Lưu Cập Nhật
+          💾 Lưu Cập Nhật Lên Mây
         </button>
       </div>
     </div>
@@ -555,7 +562,7 @@
       <div class="flex justify-end gap-2 border-t pt-3">
         <button onclick="closeNewSheetModal()" class="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50">Hủy</button>
         <button onclick="saveNewSheet()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-md">
-          💾 Lưu Toàn Bộ Phiếu Vào Hệ Thống
+          💾 Lưu Toàn Bộ Phiếu Lên Mây
         </button>
       </div>
     </div>
@@ -625,6 +632,22 @@
 
   <!-- ==================== 9. LOGIC JAVASCRIPT ==================== -->
   <script>
+    // 1. CẤU HÌNH & KHỞI TẠO FIREBASE DATABASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyBc5wvmu6r5ebAHpcGByUA4vMLAJq0QLIE",
+      authDomain: "pcgd-hongson.firebaseapp.com",
+      databaseURL: "https://pcgd-hongson-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "pcgd-hongson",
+      storageBucket: "pcgd-hongson.firebasestorage.app",
+      messagingSenderId: "84412415966",
+      appId: "1:84412415966:web:5e11deac4cd7300420e74f",
+      measurementId: "G-9SQSX6VB8W"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const dataRef = db.ref('pcgd_data');
+
     // 50 CỘT DỮ LIỆU CHUẨN BỘ GD&ĐT
     const COLUMNS_DEF = [
       { idx: 1,  num: "1",  name: "TT", width: "w-12 text-center" },
@@ -686,8 +709,6 @@
     let currentPage = 1;
     let pageSize = 100;
     let currentViewingHouseholdSheet = "";
-    
-    // Lưu giá trị bộ lọc của từng cột { [colIdx]: 'search text' }
     let columnFilters = {};
 
     function removeTones(str) {
@@ -698,14 +719,53 @@
       return str.toLowerCase().trim();
     }
 
-    // 1. TẠO TIÊU ĐỀ BẢNG & HÀNG LỌC TỪNG CỘT
+    // 2. KHỞI TẠO BẢNG & LẮNG NGHE ĐỒNG BỘ THỜI GIAN THỰC TỪ FIREBASE
+    window.addEventListener('DOMContentLoaded', () => {
+      initHeader();
+
+      // Khi bất kỳ ai thêm/sửa/xóa, sự kiện này tự động kích hoạt trên máy tất cả mọi người
+      dataRef.on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val && val.fullRows) {
+          fullRows = val.fullRows;
+          originalHeaders = val.originalHeaders || [];
+        } else {
+          fullRows = [];
+          originalHeaders = [];
+        }
+        renderData();
+        updateStats();
+      }, (error) => {
+        console.error("Lỗi kết nối Firebase:", error);
+        alert("Lỗi kết nối cơ sở dữ liệu: " + error.message);
+      });
+    });
+
+    // HÀM LƯU DỮ LIỆU LÊN ĐÁM MÂY
+    function saveState() {
+      dataRef.set({
+        fullRows: fullRows,
+        originalHeaders: originalHeaders
+      }).catch(err => {
+        alert("Không thể lưu dữ liệu lên máy chủ: " + err.message);
+      });
+    }
+
+    function clearAllData() {
+      if (confirm("Xóa toàn bộ dữ liệu hiện tại trên hệ thống máy chủ chung? Thao tác này sẽ xóa dữ liệu với tất cả người dùng!")) {
+        dataRef.remove().then(() => {
+          columnFilters = {};
+          alert("Đã làm mới cơ sở dữ liệu chung thành công!");
+        });
+      }
+    }
+
     function initHeader() {
       const trHeader = document.getElementById('tableHeaderRow');
       const trFilter = document.getElementById('tableFilterRow');
       trHeader.innerHTML = "";
       trFilter.innerHTML = "";
 
-      // Cột Tác vụ
       const thAct = document.createElement('th');
       thAct.className = "px-1 py-1.5 text-center bg-blue-100 text-blue-900 sticky-act border-r border-slate-300";
       thAct.innerText = "Tác vụ";
@@ -716,7 +776,6 @@
       thActFilter.innerHTML = `<button onclick="resetAllColumnFilters()" title="Xóa tất cả lọc" class="text-[10px] text-rose-600 font-bold hover:underline">Xóa lọc</button>`;
       trFilter.appendChild(thActFilter);
 
-      // 50 cột dữ liệu
       COLUMNS_DEF.forEach(col => {
         let stickyClass = "";
         let bg = "bg-slate-200";
@@ -725,13 +784,11 @@
         if (col.idx === 2) { stickyClass = "sticky-hodem"; bg = "bg-slate-300"; }
         if (col.idx === 3) { stickyClass = "sticky-ten"; bg = "bg-slate-300"; }
 
-        // Thêm tiêu đề
         const th = document.createElement('th');
         th.className = `px-2 py-1.5 ${col.width} ${stickyClass} ${bg} border-r border-slate-300`;
         th.innerHTML = `<div>${col.name}</div><div class="text-[9px] text-slate-500 font-mono">${col.num ? '(' + col.num + ')' : ''}</div>`;
         trHeader.appendChild(th);
 
-        // Thêm ô nhập lọc riêng cho từng cột
         const thF = document.createElement('th');
         thF.className = `p-1 ${col.width} ${stickyClass} bg-slate-100 border-r border-slate-300`;
         thF.innerHTML = `
@@ -765,7 +822,6 @@
       renderData();
     }
 
-    // 2. TỰ ĐỘNG GOM HỘ CÙNG SỐ PHIẾU CẠNH NHAU
     function sortHouseholdOrder(showMessage = false) {
       if (fullRows.length === 0) return;
 
@@ -797,38 +853,16 @@
       if (showMessage) alert("Đã tự động gom tất cả các thành viên cùng Số phiếu đứng liền cạnh nhau!");
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      initHeader();
-      const savedData = localStorage.getItem('pcgd_vanphu_rows');
-      const savedHeaders = localStorage.getItem('pcgd_vanphu_headers');
-      if (savedData) {
-        fullRows = JSON.parse(savedData);
-        if (savedHeaders) originalHeaders = JSON.parse(savedHeaders);
-        renderData();
-        updateStats();
-      }
-    });
-
-    // 3. TẠO MẪU THỬ
     function generateSampleData() {
       const curYear = new Date().getFullYear();
       const sample = [
-        // Hộ P01 (Gia đình ông Nguyễn Văn Hùng - 3 người con)
         ["", 1, "Nguyễn Văn", "Hùng", 10, 5, curYear - 40, "", "Kinh", "Không", "", "Nguyễn Văn", "Hùng", "Thôn 1", "P01", "Thường trú", "Có mặt", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Bình thường", "", "", "Chủ hộ", "Nguyễn Văn Hùng", "0912345601", ""],
         ["", 2, "Nguyễn Bảo", "An", 12, 4, curYear - 5, "", "Kinh", "Không", "", "Nguyễn Văn", "Hùng", "Thôn 1", "P01", "Thường trú", "Có mặt", "Mầm non", "Mẫu giáo 5 tuổi", "", "", "MN Văn Phú", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Bình thường", "", "", "Con", "Nguyễn Văn Hùng", "0912345601", ""],
         ["", 3, "Nguyễn Thùy", "Dương", 18, 9, curYear - 10, "x", "Kinh", "Không", "", "Nguyễn Văn", "Hùng", "Thôn 1", "P01", "Thường trú", "Có mặt", "Tiểu học", "Lớp 5A2", "", "", "TH Văn Phú", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Bình thường", "", "", "Con", "Nguyễn Văn Hùng", "0912345601", ""],
-
-        // Hộ P02 (Gia đình ông Trần Văn Tuấn - Có con học nhờ)
         ["", 4, "Trần Mai", "Anh", 20, 8, curYear - 4, "x", "Kinh", "Không", "", "Trần Văn", "Tuấn", "Thôn 2", "P02", "Tạm trú", "Có mặt", "Mầm non", "Mẫu giáo 4 tuổi", "", "", "MN Văn Phú", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Bình thường", "", "", "Con", "Trần Văn Tuấn", "0912345602", "Học sinh học nhờ"],
         ["", 5, "Trần Tiến", "Dũng", 22, 6, curYear - 9, "", "Kinh", "Không", "", "Trần Văn", "Tuấn", "Thôn 2", "P02", "Tạm trú", "Có mặt", "Tiểu học", "Lớp 4A1", "", "", "TH Văn Phú", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Bình thường", "", "", "Con", "Trần Văn Tuấn", "0912345602", "Học sinh học nhờ"],
-
-        // Hộ P03 (Gia đình ông Lê Văn Thành - Con học nơi khác)
         ["", 6, "Lê Hoàng", "Bách", 15, 2, curYear - 6, "", "Kinh", "Không", "", "Lê Văn", "Thành", "Thôn 1", "P03", "Thường trú", "Có mặt", "Tiểu học", "Lớp 1", "", "", "TH Lê Quý Đôn", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Bình thường", "", "", "Con", "Lê Văn Thành", "0912345603", "Học nơi khác (TP. Tuyên Quang)"],
-
-        // Hộ P04 (Gia đình ông Phạm Văn Minh - Khuyết tật)
         ["", 7, "Phạm Ngọc", "Châu", 5, 11, curYear - 8, "x", "Tày", "Không", "", "Phạm Văn", "Minh", "Thôn 3", "P04", "Thường trú", "Có mặt", "Tiểu học", "Lớp 3A2", "", "", "TH Văn Phú", "", "", "", "", "", "", "", "", "", "", "", "", "", "x", "", "", "", "", "", "", "", "x", "Học hòa nhập", "", "", "Con", "Phạm Văn Minh", "0912345604", "Khuyết tật vận động nhẹ"],
-
-        // Hộ P05 (Gia đình ông Đỗ Văn Nam)
         ["", 8, "Đỗ Minh", "Đức", 30, 1, curYear - 11, "", "Kinh", "Không", "", "Đỗ Văn", "Nam", "Thôn 4", "P05", "Thường trú", "Có mặt", "Tiểu học", "Lớp 5A3", "", "", "TH Văn Phú", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Bình thường", "", "", "Con", "Đỗ Văn Nam", "0912345607", ""]
       ];
 
@@ -848,10 +882,9 @@
 
       sortHouseholdOrder(false);
       updateStats();
-      alert("Đã tạo mẫu thành công! Số phiếu giống nhau đã được gom liền kề nhau.");
+      alert("Đã tạo mẫu thành công và lưu trực tiếp lên máy chủ đám mây!");
     }
 
-    // 4. NẠP FILE EXCEL
     document.getElementById('excelFileInput').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -876,7 +909,7 @@
               return r;
             });
             sortHouseholdOrder(false);
-            alert(`Đã nạp thành công ${fullRows.length} đối tượng và tự động gom hộ theo số phiếu!`);
+            alert(`Đã nạp thành công ${fullRows.length} đối tượng lên hệ thống đám mây!`);
           }
 
           saveState();
@@ -906,14 +939,11 @@
       return hasMark || note.includes("khuyet tat") || String(r[43] || "").trim() !== "";
     }
 
-    // 5. LỌC DỮ LIỆU ĐA TẦNG + LỌC TRỰC TIẾP TỪNG CỘT
     function getFilteredRows() {
       return fullRows.map((r, i) => ({ r, originalIdx: i })).filter(item => {
         const r = item.r;
-
         if (!checkSchoolRole(r, currentSchoolRole)) return false;
 
-        // KIỂM TRA BỘ LỌC CỦA TỪNG CỘT
         for (const colIdxStr in columnFilters) {
           const cIdx = parseInt(colIdxStr);
           const filterVal = columnFilters[cIdx];
@@ -922,12 +952,10 @@
             if (!cellVal.includes(filterVal)) return false;
           }
         }
-
         return true;
       });
     }
 
-    // 6. RENDER DỮ LIỆU
     function renderData() {
       const filtered = getFilteredRows();
 
@@ -956,11 +984,10 @@
       }
     }
 
-    // A. Render Bảng tính
     function renderTableView(pageRows, totalFiltered) {
       const tbody = document.getElementById('tableBody');
       if (totalFiltered === 0) {
-        tbody.innerHTML = `<tr><td colspan="52" class="text-center py-16 text-slate-400 font-medium">Không tìm thấy bản ghi nào khớp điều kiện lọc. Nhấn <b>"🔄 Xóa toàn bộ lọc cột"</b> để thử lại.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="52" class="text-center py-16 text-slate-400 font-medium">Chưa có dữ liệu hoặc không khớp điều kiện lọc.</td></tr>`;
         return;
       }
 
@@ -1025,7 +1052,6 @@
             return;
           }
 
-          // Cột 14 (Số phiếu): Bấm vào mở hộp thoại xem & thêm người vào hộ
           if (col.idx === 14) {
             html += `
               <td class="px-1.5 py-1 border-r border-slate-200 text-center ${col.width}">
@@ -1039,7 +1065,6 @@
             return;
           }
 
-          // Cột 16: Cư trú
           if (col.idx === 16) {
             html += `
               <td class="px-1.5 py-1 border-r border-slate-200 text-center ${col.width}">
@@ -1068,7 +1093,6 @@
       }).join('');
     }
 
-    // B. Render Dạng Thẻ
     function renderCardView(pageRows, totalFiltered) {
       const grid = document.getElementById('cardGrid');
       if (totalFiltered === 0) {
@@ -1140,7 +1164,6 @@
       }).join('');
     }
 
-    // 7. CỬA SỔ XEM TOÀN BỘ NGƯỜI TRONG HỘ & THÊM TRỰC TIẾP VÀO HỘ
     function openHouseholdModal(sheetNo) {
       if (!sheetNo) return alert("Bản ghi này chưa có Số phiếu!");
       currentViewingHouseholdSheet = sheetNo;
@@ -1155,7 +1178,6 @@
       document.getElementById('hhModalPhone').innerText = first[49] || 'Không có';
       document.getElementById('hhModalCount').innerText = members.length;
 
-      // Xóa trắng form thêm nhanh
       document.getElementById('hhNewLastName').value = first[2] || "";
       document.getElementById('hhNewFirstName').value = "";
       document.getElementById('hhNewYear').value = new Date().getFullYear() - 7;
@@ -1209,7 +1231,6 @@
       document.getElementById('modalHousehold').classList.add('hidden');
     }
 
-    // LƯU TRỰC TIẾP THÀNH VIÊN VÀO HỘ HIỆN TẠI
     function saveMemberIntoHousehold() {
       if (!currentViewingHouseholdSheet) return;
       const members = fullRows.filter(r => String(r[14] || "").trim() === currentViewingHouseholdSheet);
@@ -1241,7 +1262,7 @@
       newRow[11] = head[11];
       newRow[12] = head[12];
       newRow[13] = head[13];
-      newRow[14] = currentViewingHouseholdSheet; // Cùng số phiếu
+      newRow[14] = currentViewingHouseholdSheet;
       newRow[15] = studyType === "GUEST" ? "Tạm trú" : (head[15] || "Thường trú");
       newRow[16] = residence;
       newRow[18] = cls;
@@ -1252,12 +1273,11 @@
       newRow[50] = studyType === "OUT" ? "Học nơi khác" : (studyType === "GUEST" ? "Học sinh học nhờ" : "");
 
       fullRows.push(newRow);
-      sortHouseholdOrder(false); // Xếp ngay vào đúng vị trí của số phiếu
-      openHouseholdModal(currentViewingHouseholdSheet); // Cập nhật lại danh sách hộ ngay tức thì
+      sortHouseholdOrder(false);
+      openHouseholdModal(currentViewingHouseholdSheet);
       alert(`Đã thêm thành công em ${lName} ${fName} vào hộ ${currentViewingHouseholdSheet}!`);
     }
 
-    // 8. SỬA THÔNG TIN CHI TIẾT
     function openEditModal(rowIdx) {
       const r = fullRows[rowIdx];
       document.getElementById('editRowIdx').value = rowIdx;
@@ -1369,7 +1389,6 @@
       alert(`Đã cập nhật thông tin thành công cho học sinh ${r[2]} ${r[3]}!`);
     }
 
-    // 9. THÊM PHIẾU MỚI
     function openNewSheetModal() {
       document.getElementById('modalNewSheet').classList.remove('hidden');
       document.getElementById('memberTableBody').innerHTML = "";
@@ -1484,13 +1503,12 @@
         closeNewSheetModal();
         renderData();
         updateStats();
-        alert(`Đã lưu Phiếu ${sheetNo} với ${addedCount} nhân khẩu thành công!`);
+        alert(`Đã lưu Phiếu ${sheetNo} với ${addedCount} nhân khẩu lên máy chủ đám mây thành công!`);
       } else {
         alert("Vui lòng nhập Tên và Năm sinh cho ít nhất một nhân khẩu!");
       }
     }
 
-    // 10. BÁO CÁO TỔNG HỢP
     function toggleSummaryModal() {
       const modal = document.getElementById('modalSummary');
       const isHidden = modal.classList.contains('hidden');
@@ -1711,23 +1729,6 @@
       }
       currentPage = 1;
       renderData();
-    }
-
-    function saveState() {
-      localStorage.setItem('pcgd_vanphu_rows', JSON.stringify(fullRows));
-      localStorage.setItem('pcgd_vanphu_headers', JSON.stringify(originalHeaders));
-    }
-
-    function clearAllData() {
-      if (confirm("Xóa toàn bộ dữ liệu hiện tại để làm mới?")) {
-        localStorage.removeItem('pcgd_vanphu_rows');
-        localStorage.removeItem('pcgd_vanphu_headers');
-        fullRows = [];
-        originalHeaders = [];
-        columnFilters = {};
-        renderData();
-        updateStats();
-      }
     }
 
     document.getElementById('btnExportExcel').addEventListener('click', function() {
