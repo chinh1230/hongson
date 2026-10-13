@@ -3,1904 +3,995 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EduPCGD - Hệ Thống Quản Lý Phổ Cập Giáo Dục</title>
-  
-  <!-- Google Fonts: Be Vietnam Pro & Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
+  <title>Hệ Thống Quản Lý & Điều Tra Phổ Cập Giáo Dục (PCGD - XMC)</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Font Awesome CDN -->
+  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <!-- SheetJS (XLSX) CDN for Excel Export/Import -->
+  <!-- SheetJS để Import/Export Excel chính xác định dạng -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Be Vietnam Pro"', 'sans-serif'],
-          },
-          colors: {
-            edu: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0284c7',
-              600: '#0369a1',
-              700: '#075985',
-              800: '#0c4a6e',
-            },
-            tealGov: {
-              500: '#0d9488',
-              600: '#0f766e',
-            }
-          }
-        }
-      }
-    }
-  </script>
-
   <style>
-    /* In ấn chuẩn phiếu A4 */
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      #printableHouseholdForm, #printableHouseholdForm * {
-        visibility: visible;
-      }
-      #printableHouseholdForm {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 20px;
-        background: white;
-        color: black;
-      }
-      .no-print {
-        display: none !important;
-      }
-    }
-    
-    /* Custom scrollbars */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .table-responsive { max-height: 600px; overflow-y: auto; }
+    th { position: sticky; top: 0; background-color: #f1f5f9; z-index: 10; }
   </style>
 </head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
-<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
-  <header class="bg-gradient-to-r from-sky-800 via-sky-700 to-teal-700 text-white shadow-md sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
-        <!-- Logo & Title -->
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center shadow-inner text-amber-300 text-xl font-bold">
-            <i class="fa-solid fa-graduation-cap"></i>
-          </div>
-          <div>
-            <div class="font-bold text-lg leading-tight tracking-wide flex items-center space-x-2">
-              <span>EduPCGD</span>
-              <span class="text-xs bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full font-medium">Phiên bản 2026</span>
-            </div>
-            <p class="text-xs text-sky-200 hidden sm:block">Phần Mềm Phổ Cập Giáo Dục Mầm Non - Tiểu Học - THCS</p>
-          </div>
+  <!-- Header -->
+  <header class="bg-emerald-700 text-white shadow-lg sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-graduation-cap text-2xl text-emerald-200"></i>
+        <div>
+          <h1 class="text-lg font-bold uppercase tracking-wide">Quản Lý Dữ Liệu Phổ Cập Giáo Dục</h1>
+          <p class="text-xs text-emerald-100">Chuẩn hóa theo phiếu điều tra phổ cập giáo dục - xóa mù chữ</p>
         </div>
-
-        <!-- Right Quick Actions -->
-        <div class="flex items-center space-x-2 sm:space-x-4">
-          <div class="hidden md:flex flex-col text-right text-xs">
-            <span class="font-semibold text-white/95" id="headerCurrentLoc">Xã / Phường: Tân Tiến</span>
-            <span class="text-sky-200" id="headerDate">Năm điều tra: 2026</span>
-          </div>
-
-          <!-- Quick Add Button -->
-          <button onclick="openModal('addStudentModal')" class="bg-amber-400 hover:bg-amber-500 active:scale-95 transition text-sky-950 font-semibold px-3 py-2 rounded-lg text-sm flex items-center space-x-1.5 shadow-sm">
-            <i class="fa-solid fa-user-plus text-xs"></i>
-            <span class="hidden sm:inline">Thêm Đối Tượng</span>
-          </button>
-
-          <!-- Mobile Menu Toggle Button -->
-          <button onclick="toggleMobileNav()" class="md:hidden p-2 text-white hover:bg-white/10 rounded-lg focus:outline-none">
-            <i class="fa-solid fa-bars text-xl" id="menuToggleIcon"></i>
-          </button>
-        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="openModal()" class="bg-emerald-500 hover:bg-emerald-600 px-3 py-2 rounded text-sm font-semibold flex items-center gap-1 shadow transition">
+          <i class="fa-solid fa-user-plus"></i> Thêm phiếu mới
+        </button>
+        <label class="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm font-semibold flex items-center gap-1 cursor-pointer shadow transition">
+          <i class="fa-solid fa-file-import"></i> Nhập Excel
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="importExcel(event)">
+        </label>
+        <button onclick="exportExcel()" class="bg-amber-600 hover:bg-amber-700 px-3 py-2 rounded text-sm font-semibold flex items-center gap-1 shadow transition">
+          <i class="fa-solid fa-file-excel"></i> Xuất Excel chuẩn
+        </button>
+        <button onclick="backupData()" class="bg-slate-700 hover:bg-slate-800 px-3 py-2 rounded text-sm font-semibold flex items-center gap-1 shadow transition" title="Sao lưu dự phòng">
+          <i class="fa-solid fa-download"></i> Sao lưu
+        </button>
       </div>
     </div>
   </header>
 
-  <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-16 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div id="navContainer" class="hidden md:flex space-x-1 sm:space-x-3 py-2 overflow-x-auto text-sm font-medium">
-        <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="tab-button active flex items-center space-x-2 px-3 py-2 rounded-lg text-sky-700 bg-sky-50 font-semibold border-b-2 border-sky-600">
-          <i class="fa-solid fa-chart-pie"></i>
-          <span>Tổng Quan Thống Kê</span>
-        </button>
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <button onclick="switchTab('students')" id="tabBtn-students" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-slate-600 hover:text-sky-700 hover:bg-slate-50 transition">
-          <i class="fa-solid fa-users-line"></i>
-          <span>Danh Sách Điều Tra</span>
-        </button>
-
-        <button onclick="switchTab('household')" id="tabBtn-household" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-slate-600 hover:text-sky-700 hover:bg-slate-50 transition">
-          <i class="fa-solid fa-house-chimney-user"></i>
-          <span>Phiếu Hộ Gia Đình & In</span>
-        </button>
-
-        <button onclick="switchTab('reports')" id="tabBtn-reports" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-slate-600 hover:text-sky-700 hover:bg-slate-50 transition">
-          <i class="fa-solid fa-file-contract"></i>
-          <span>Báo Cáo Tỷ Lệ Độ Tuổi</span>
-        </button>
-
-        <button onclick="switchTab('dataManager')" id="tabBtn-dataManager" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-slate-600 hover:text-sky-700 hover:bg-slate-50 transition">
-          <i class="fa-solid fa-database"></i>
-          <span>Quản Lý Dữ Liệu & Excel</span>
-        </button>
-      </div>
-
-      <!-- Mobile Dropdown Navigation -->
-      <div id="mobileNavMenu" class="md:hidden hidden py-2 space-y-1">
-        <button onclick="switchTab('dashboard')" class="w-full text-left px-3 py-2.5 rounded-lg flex items-center space-x-3 text-slate-700 hover:bg-sky-50 font-medium">
-          <i class="fa-solid fa-chart-pie text-sky-600 w-5"></i><span>Tổng Quan Thống Kê</span>
-        </button>
-        <button onclick="switchTab('students')" class="w-full text-left px-3 py-2.5 rounded-lg flex items-center space-x-3 text-slate-700 hover:bg-sky-50 font-medium">
-          <i class="fa-solid fa-users-line text-sky-600 w-5"></i><span>Danh Sách Điều Tra</span>
-        </button>
-        <button onclick="switchTab('household')" class="w-full text-left px-3 py-2.5 rounded-lg flex items-center space-x-3 text-slate-700 hover:bg-sky-50 font-medium">
-          <i class="fa-solid fa-house-chimney-user text-sky-600 w-5"></i><span>Phiếu Hộ Gia Đình & In</span>
-        </button>
-        <button onclick="switchTab('reports')" class="w-full text-left px-3 py-2.5 rounded-lg flex items-center space-x-3 text-slate-700 hover:bg-sky-50 font-medium">
-          <i class="fa-solid fa-file-contract text-sky-600 w-5"></i><span>Báo Cáo Tỷ Lệ Độ Tuổi</span>
-        </button>
-        <button onclick="switchTab('dataManager')" class="w-full text-left px-3 py-2.5 rounded-lg flex items-center space-x-3 text-slate-700 hover:bg-sky-50 font-medium">
-          <i class="fa-solid fa-database text-sky-600 w-5"></i><span>Quản Lý Dữ Liệu & Excel</span>
-        </button>
-      </div>
-    </div>
-  </nav>
-
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-    <!-- ==============================================
-         TAB 1: TỔNG QUAN THỐNG KÊ (DASHBOARD)
-    =============================================== -->
-    <section id="tab-dashboard" class="tab-content block space-y-6">
-      
-      <!-- Top Overview Bar -->
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm gap-3">
+    <!-- Dashboard Thống kê nhanh -->
+    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+        <div class="p-3 bg-emerald-100 text-emerald-700 rounded-lg"><i class="fa-solid fa-users text-xl"></i></div>
         <div>
-          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <span class="w-2.5 h-6 bg-sky-600 rounded-full inline-block"></span>
-            Bảng Điều Khiển Tiến Độ Phổ Cập Giáo Dục
-          </h2>
-          <p class="text-xs text-slate-500 mt-0.5">Dữ liệu tổng hợp theo thời gian thực từ các thôn, bản và tổ dân phố</p>
-        </div>
-        <div class="flex items-center gap-2 text-xs">
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-emerald-100 text-emerald-800">
-            <i class="fa-solid fa-circle-check mr-1.5 text-xs text-emerald-500"></i> Đồng bộ LocalStorage
-          </span>
-          <button onclick="renderAllData()" class="p-2 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded-lg transition" title="Làm mới số liệu">
-            <i class="fa-solid fa-rotate text-sm"></i>
-          </button>
+          <div class="text-xs text-slate-500 font-medium">Tổng nhân khẩu</div>
+          <div id="statTotal" class="text-xl font-bold text-slate-800">0</div>
         </div>
       </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <!-- KPI 1 -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
-          <div class="flex justify-between items-start">
-            <span class="text-xs font-semibold text-slate-500">Tổng nhân khẩu</span>
-            <span class="p-2 bg-blue-50 text-blue-600 rounded-lg text-xs"><i class="fa-solid fa-id-card"></i></span>
-          </div>
-          <div class="text-2xl font-bold text-slate-800 mt-2" id="kpiTotal">0</div>
-          <span class="text-[11px] text-slate-500">Đối tượng đã điều tra</span>
-        </div>
-
-        <!-- KPI 2 -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
-          <div class="flex justify-between items-start">
-            <span class="text-xs font-semibold text-pink-600">Mầm non (0-5t)</span>
-            <span class="p-2 bg-pink-50 text-pink-600 rounded-lg text-xs"><i class="fa-solid fa-shapes"></i></span>
-          </div>
-          <div class="text-2xl font-bold text-pink-700 mt-2" id="kpiPreSchool">0</div>
-          <span class="text-[11px] text-slate-500" id="kpiPreSchoolSub">Độ tuổi mẫu giáo</span>
-        </div>
-
-        <!-- KPI 3 -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
-          <div class="flex justify-between items-start">
-            <span class="text-xs font-semibold text-emerald-600">Tiểu học (6-10t)</span>
-            <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-xs"><i class="fa-solid fa-book-open"></i></span>
-          </div>
-          <div class="text-2xl font-bold text-emerald-700 mt-2" id="kpiPrimary">0</div>
-          <span class="text-[11px] text-slate-500" id="kpiPrimarySub">Đang trong độ tuổi</span>
-        </div>
-
-        <!-- KPI 4 -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
-          <div class="flex justify-between items-start">
-            <span class="text-xs font-semibold text-purple-600">THCS (11-14t)</span>
-            <span class="p-2 bg-purple-50 text-purple-600 rounded-lg text-xs"><i class="fa-solid fa-graduation-cap"></i></span>
-          </div>
-          <div class="text-2xl font-bold text-purple-700 mt-2" id="kpiSecondary">0</div>
-          <span class="text-[11px] text-slate-500">Đang độ tuổi THCS</span>
-        </div>
-
-        <!-- KPI 5 -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
-          <div class="flex justify-between items-start">
-            <span class="text-xs font-semibold text-teal-600">Trẻ 6t vào Lớp 1</span>
-            <span class="p-2 bg-teal-50 text-teal-600 rounded-lg text-xs"><i class="fa-solid fa-percent"></i></span>
-          </div>
-          <div class="text-2xl font-bold text-teal-700 mt-2" id="kpi6YearOldRate">0%</div>
-          <span class="text-[11px] text-slate-500" id="kpi6YearOldRatio">0/0 trẻ 6 tuổi</span>
-        </div>
-
-        <!-- KPI 6 -->
-        <div class="bg-white p-4 rounded-xl border border-red-200 bg-red-50/20 shadow-sm hover:shadow transition">
-          <div class="flex justify-between items-start">
-            <span class="text-xs font-semibold text-red-600">Cần theo dõi</span>
-            <span class="p-2 bg-red-100 text-red-600 rounded-lg text-xs"><i class="fa-solid fa-triangle-exclamation"></i></span>
-          </div>
-          <div class="text-2xl font-bold text-red-600 mt-2" id="kpiAtRisk">0</div>
-          <span class="text-[11px] text-red-500 font-medium">Bỏ học / Chưa đi học</span>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+        <div class="p-3 bg-blue-100 text-blue-700 rounded-lg"><i class="fa-solid fa-house-user text-xl"></i></div>
+        <div>
+          <div class="text-xs text-slate-500 font-medium">Số hộ gia đình</div>
+          <div id="statHouseholds" class="text-xl font-bold text-slate-800">0</div>
         </div>
       </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Chart 1: Phân bố cấp học -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
-              <i class="fa-solid fa-chart-column text-sky-600"></i>
-              Thống Kê Độ Tuổi Theo Các Cấp Phổ Cập Giáo Dục
-            </h3>
-            <span class="text-xs text-slate-400">Năm 2026</span>
-          </div>
-          <div class="h-64 relative">
-            <canvas id="ageDistributionChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Chart 2: Tình trạng học tập -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
-              <i class="fa-solid fa-pie-chart text-emerald-600"></i>
-              Tỷ Lệ Tình Trạng Học Tập
-            </h3>
-          </div>
-          <div class="h-64 relative flex items-center justify-center">
-            <canvas id="statusDoughnutChart"></canvas>
-          </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+        <div class="p-3 bg-amber-100 text-amber-700 rounded-lg"><i class="fa-solid fa-child text-xl"></i></div>
+        <div>
+          <div class="text-xs text-slate-500 font-medium">Mầm non (0-5t)</div>
+          <div id="statMamNon" class="text-xl font-bold text-slate-800">0</div>
         </div>
       </div>
-
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-gradient-to-r from-red-50/50 to-amber-50/30">
-          <div>
-            <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
-              <i class="fa-solid fa-bell text-red-500"></i>
-              Danh Sách Đối Tượng Cần Chú Ý Đặc Biệt (Chưa Đi Học, Bỏ Học, Khuyết Tật)
-            </h3>
-            <p class="text-xs text-slate-500 mt-0.5">Giáo viên phụ trách địa bàn cần phối hợp trưởng thôn đến vận động gia đình</p>
-          </div>
-          <span class="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-full font-semibold" id="warningBadgeCount">0 trường hợp</span>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+        <div class="p-3 bg-indigo-100 text-indigo-700 rounded-lg"><i class="fa-solid fa-book-open-reader text-xl"></i></div>
+        <div>
+          <div class="text-xs text-slate-500 font-medium">Tiểu học (6-10t)</div>
+          <div id="statTieuHoc" class="text-xl font-bold text-slate-800">0</div>
         </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-600">
-            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
-              <tr>
-                <th class="px-4 py-3">Họ và tên</th>
-                <th class="px-4 py-3">Ngày sinh (Tuổi)</th>
-                <th class="px-4 py-3">Địa bàn (Thôn/Xóm)</th>
-                <th class="px-4 py-3">Chủ hộ / Phụ huynh</th>
-                <th class="px-4 py-3">Tình trạng</th>
-                <th class="px-4 py-3">Ghi chú & Chính sách</th>
-                <th class="px-4 py-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody id="warningTableBody" class="divide-y divide-slate-100">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+        <div class="p-3 bg-violet-100 text-violet-700 rounded-lg"><i class="fa-solid fa-user-graduate text-xl"></i></div>
+        <div>
+          <div class="text-xs text-slate-500 font-medium">THCS (11-14t)</div>
+          <div id="statTHCS" class="text-xl font-bold text-slate-800">0</div>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+        <div class="p-3 bg-rose-100 text-rose-700 rounded-lg"><i class="fa-solid fa-wheelchair text-xl"></i></div>
+        <div>
+          <div class="text-xs text-slate-500 font-medium">Khuyết tật</div>
+          <div id="statKhuyetTat" class="text-xl font-bold text-slate-800">0</div>
         </div>
       </div>
     </section>
 
-    <!-- ==============================================
-         TAB 2: DANH SÁCH ĐIỀU TRA PHỔ CẬP (STUDENTS)
-    =============================================== -->
-    <section id="tab-students" class="tab-content hidden space-y-4">
-      
-      <!-- Filter Bar -->
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <div class="flex flex-col md:flex-row gap-3 items-center justify-between">
-          <!-- Search Input -->
-          <div class="relative w-full md:w-96">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-            <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Tìm theo tên, CCCD/Định danh, tên cha mẹ..." class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none transition">
+    <!-- Bảng lọc và danh sách dữ liệu -->
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <!-- Bộ lọc và công cụ -->
+      <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-wrap gap-3 justify-between items-center">
+        <div class="flex flex-wrap gap-2 items-center flex-1">
+          <div class="relative w-full sm:w-64">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input type="text" id="searchInput" oninput="renderTable()" placeholder="Tìm theo tên, số phiếu, chủ hộ..." 
+                   class="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
           </div>
+          
+          <select id="filterThon" onchange="renderTable()" class="text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none">
+            <option value="">-- Tất cả Thôn/Tổ --</option>
+          </select>
 
-          <!-- Quick Actions -->
-          <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-            <button onclick="openModal('addStudentModal')" class="bg-sky-600 hover:bg-sky-700 active:scale-95 transition text-white px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 shadow-sm">
-              <i class="fa-solid fa-plus"></i> Thêm Bản Ghi Mới
-            </button>
-            <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 shadow-sm">
-              <i class="fa-solid fa-file-excel"></i> Xuất Excel
-            </button>
-          </div>
-        </div>
-
-        <!-- Filter Dropdowns -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-xs">
-          <div>
-            <label class="block text-slate-500 font-medium mb-1">Thôn / Bản / Tổ dân phố</label>
-            <select id="filterVillage" onchange="applyFilters()" class="w-full p-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none">
-              <option value="">-- Tất cả thôn xóm --</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-slate-500 font-medium mb-1">Độ tuổi / Cấp học</label>
-            <select id="filterAgeGroup" onchange="applyFilters()" class="w-full p-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none">
-              <option value="">-- Tất cả độ tuổi --</option>
-              <option value="mn">Mầm non (0-5 tuổi)</option>
-              <option value="6t">Đúng 6 tuổi (Vào lớp 1)</option>
-              <option value="th">Tiểu học (6-10 tuổi)</option>
-              <option value="thcs">THCS (11-14 tuổi)</option>
-              <option value="post_thcs">15-18 tuổi (Sau THCS)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-slate-500 font-medium mb-1">Tình trạng học tập</label>
-            <select id="filterStatus" onchange="applyFilters()" class="w-full p-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none">
-              <option value="">-- Tất cả tình trạng --</option>
-              <option value="DungDoTuoi">Đang học đúng độ tuổi</option>
-              <option value="TraiTuyen">Học trái tuyến / trường tư</option>
-              <option value="HoanThanh">Đã hoàn thành cấp học</option>
-              <option value="ChuaDiHoc">Chưa đi học / Chưa ra lớp</option>
-              <option value="BoHoc">Bỏ học giữa chừng</option>
-              <option value="ChuyenDi">Chuyển đi khỏi địa phương</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-slate-500 font-medium mb-1">Diện chính sách / Khuyết tật</label>
-            <select id="filterPolicy" onchange="applyFilters()" class="w-full p-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none">
-              <option value="">-- Tất cả đối tượng --</option>
-              <option value="KhuyetTat">Khuyết tật</option>
-              <option value="HoNgheo">Hộ nghèo / Cận nghèo</option>
-              <option value="MoCoi">Trẻ mồ côi</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center text-xs text-slate-500">
-          <div>
-            Hiển thị <span id="recordCount" class="font-bold text-sky-700">0</span> đối tượng điều tra
-          </div>
-          <div class="flex items-center space-x-1">
-            <span>Sắp xếp theo: Họ tên A-Z</span>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto min-h-[300px]">
-          <table class="w-full text-left text-xs text-slate-700">
-            <thead class="bg-slate-100/80 text-slate-600 uppercase font-semibold border-b border-slate-200 sticky top-0">
-              <tr>
-                <th class="px-3 py-3 w-10 text-center">STT</th>
-                <th class="px-3 py-3">Mã Định Danh / CCCD</th>
-                <th class="px-3 py-3">Họ và Tên</th>
-                <th class="px-3 py-3">Ngày Sinh (Tuổi)</th>
-                <th class="px-3 py-3 text-center">Giới Tính</th>
-                <th class="px-3 py-3">Dân Tộc</th>
-                <th class="px-3 py-3">Chủ Hộ / Cha Mẹ</th>
-                <th class="px-3 py-3">Thôn / Bản</th>
-                <th class="px-3 py-3">Trường / Lớp Đang Học</th>
-                <th class="px-3 py-3">Tình Trạng</th>
-                <th class="px-3 py-3">Diện Chính Sách</th>
-                <th class="px-3 py-3 text-center w-28">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody id="studentTableBody" class="divide-y divide-slate-100">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==============================================
-         TAB 3: PHIẾU ĐIỀU TRA HỘ GIA ĐÌNH & IN ẤN (HOUSEHOLD)
-    =============================================== -->
-    <section id="tab-household" class="tab-content hidden space-y-4">
-      
-      <!-- Selection Controls (Hidden when printing) -->
-      <div class="no-print bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div class="flex items-center space-x-3 w-full sm:w-auto">
-          <label class="text-xs sm:text-sm font-semibold text-slate-700 whitespace-nowrap">Chọn Hộ Gia Đình Cần Xem:</label>
-          <select id="householdSelect" onchange="renderHouseholdForm()" class="p-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 w-full sm:w-80">
-            <!-- Populated via JS -->
+          <select id="filterAgeGroup" onchange="renderTable()" class="text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none">
+            <option value="">-- Tất cả độ tuổi --</option>
+            <option value="0-5">0 - 5 tuổi (Mầm non)</option>
+            <option value="6-10">6 - 10 tuổi (Tiểu học)</option>
+            <option value="11-14">11 - 14 tuổi (THCS)</option>
+            <option value="15-18">15 - 18 tuổi (THPT)</option>
+            <option value="15-60">15 - 60 tuổi (Độ tuổi XMC)</option>
           </select>
         </div>
 
-        <div class="flex items-center space-x-2">
-          <button onclick="window.print()" class="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center space-x-2 shadow-sm transition">
-            <i class="fa-solid fa-print"></i>
-            <span>In Phiếu Điều Tra (Khổ A4)</span>
+        <div class="flex items-center gap-2 text-sm text-slate-500">
+          <button onclick="clearAllData()" class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1 rounded border border-rose-200 hover:bg-rose-50 transition">
+            <i class="fa-solid fa-trash-can"></i> Xóa tất cả
           </button>
         </div>
       </div>
 
-      <div id="printableHouseholdForm" class="bg-white p-8 sm:p-12 rounded-xl border border-slate-300 shadow-md max-w-4xl mx-auto text-black">
-        
-        <!-- Header standard Bộ GD&ĐT -->
-        <div class="text-center space-y-1 mb-6 border-b pb-4 border-slate-300">
-          <div class="flex justify-between items-start text-xs font-serif uppercase">
-            <div class="text-left">
-              <p class="font-bold">UBND HUYỆN TÂN SƠN</p>
-              <p class="font-bold">BAN CHỈ ĐẠO PCGD XÃ TÂN TIẾN</p>
-            </div>
-            <div class="text-center">
-              <p class="font-bold">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-              <p class="font-semibold underline">Độc lập - Tự do - Hạnh phúc</p>
-            </div>
-          </div>
-          
-          <div class="pt-4">
-            <h1 class="text-xl font-bold uppercase tracking-wide">PHIẾU ĐIỀU TRA PHỔ CẬP GIÁO DỤC</h1>
-            <p class="text-xs italic text-slate-600">(Phổ cập giáo dục mầm non cho trẻ 5 tuổi, tiểu học, THCS và xóa mù chữ)</p>
-          </div>
-        </div>
-
-        <!-- Household Info Block -->
-        <div class="text-xs space-y-2 mb-6">
-          <div class="grid grid-cols-2 gap-4">
-            <div><span class="font-bold">Họ và tên chủ hộ:</span> <span id="printHeadName" class="font-semibold text-sm">--</span></div>
-            <div><span class="font-bold">Mã hộ điều tra:</span> <span id="printHouseholdId">--</span></div>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div><span class="font-bold">Địa chỉ / Thôn / Bản:</span> <span id="printVillage">--</span></div>
-            <div><span class="font-bold">Xã / Thị trấn:</span> Tân Tiến, Tỉnh Phú Thọ</div>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div><span class="font-bold">Số điện thoại liên hệ:</span> <span id="printPhone">--</span></div>
-            <div><span class="font-bold">Thuộc diện chính sách:</span> <span id="printPolicy">Không</span></div>
-          </div>
-        </div>
-
-        <!-- Members Table -->
-        <div class="mb-6">
-          <h2 class="text-xs font-bold uppercase mb-2">I. Danh Sách Các Thành Viên Trong Độ Tuổi Phổ Cập (Từ 0 đến 18 tuổi):</h2>
-          <table class="w-full border-collapse border border-black text-[11px]">
-            <thead>
-              <tr class="bg-slate-100 text-center font-bold">
-                <th class="border border-black p-1.5 w-8">STT</th>
-                <th class="border border-black p-1.5">Họ và tên</th>
-                <th class="border border-black p-1.5 w-20">Ngày sinh</th>
-                <th class="border border-black p-1.5 w-12">Nam/Nữ</th>
-                <th class="border border-black p-1.5 w-16">Dân tộc</th>
-                <th class="border border-black p-1.5">Quan hệ với chủ hộ</th>
-                <th class="border border-black p-1.5">Trường, lớp đang học</th>
-                <th class="border border-black p-1.5">Tình trạng học tập</th>
-                <th class="border border-black p-1.5">Khuyết tật / Ghi chú</th>
-              </tr>
-            </thead>
-            <tbody id="printMembersTableBody">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Investigation Note -->
-        <div class="text-xs space-y-1 mb-8">
-          <p><span class="font-bold">Ghi chú của điều tra viên:</span> <span id="printNotes" class="italic">Gia đình hợp tác tốt, thông tin khai báo đầy đủ theo giấy khai sinh.</span></p>
-        </div>
-
-        <!-- Signature Section -->
-        <div class="grid grid-cols-2 text-center text-xs pt-4 gap-8">
-          <div>
-            <p class="font-semibold uppercase">ĐẠI DIỆN HỘ GIA ĐÌNH</p>
-            <p class="italic text-[10px]">(Ký và ghi rõ họ tên)</p>
-            <div class="h-20"></div>
-            <p id="printSignHeadName" class="font-bold uppercase">--</p>
-          </div>
-          <div>
-            <p class="italic">Ngày ...... tháng ...... năm 2026</p>
-            <p class="font-semibold uppercase">GIÁO VIÊN ĐIỀU TRA</p>
-            <p class="italic text-[10px]">(Ký và ghi rõ họ tên)</p>
-            <div class="h-20"></div>
-            <p class="font-bold uppercase">Nguyễn Thị Hồng Hạnh</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==============================================
-         TAB 4: BÁO CÁO TỶ LỆ & ĐỘ TUỔI (REPORTS)
-    =============================================== -->
-    <section id="tab-reports" class="tab-content hidden space-y-6">
-      
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-1">
-          <i class="fa-solid fa-file-invoice text-sky-600"></i>
-          Báo Cáo Tổng Hợp Các Tiêu Chuẩn Phổ Cập Giáo Dục (Năm Học 2025 - 2026)
-        </h2>
-        <p class="text-xs text-slate-500 mb-4">Áp dụng theo Nghị định 20/2014/NĐ-CP và Thông tư hướng dẫn của Bộ GD&ĐT</p>
-
-        <!-- Cohort Breakdown Table -->
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left text-slate-700 border border-slate-200">
-            <thead class="bg-slate-100 font-semibold text-slate-700 uppercase">
-              <tr>
-                <th class="p-3 border border-slate-200">Cấp học / Nhóm đối tượng</th>
-                <th class="p-3 border border-slate-200 text-center">Năm sinh</th>
-                <th class="p-3 border border-slate-200 text-center">Độ tuổi</th>
-                <th class="p-3 border border-slate-200 text-center">Tổng số trẻ</th>
-                <th class="p-3 border border-slate-200 text-center">Đang đi học</th>
-                <th class="p-3 border border-slate-200 text-center">Tỷ lệ huy động (%)</th>
-                <th class="p-3 border border-slate-200 text-center">Đánh giá tiêu chuẩn PC</th>
-              </tr>
-            </thead>
-            <tbody id="reportCohortTableBody" class="divide-y divide-slate-200">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
+      <!-- Bảng hiển thị dữ liệu -->
+      <div class="table-responsive">
+        <table class="w-full text-sm text-left border-collapse">
+          <thead>
+            <tr class="text-xs uppercase bg-slate-100 text-slate-600 border-b border-slate-200">
+              <th class="py-3 px-3 w-12 text-center">STT</th>
+              <th class="py-3 px-3">Họ và tên</th>
+              <th class="py-3 px-2 text-center">Ngày sinh</th>
+              <th class="py-3 px-2 text-center">Nữ</th>
+              <th class="py-3 px-3">Dân tộc</th>
+              <th class="py-3 px-3">Số phiếu</th>
+              <th class="py-3 px-3">Chủ hộ</th>
+              <th class="py-3 px-3">Thôn / Địa chỉ</th>
+              <th class="py-3 px-3">Quan hệ</th>
+              <th class="py-3 px-3">Bậc TN / Lớp</th>
+              <th class="py-3 px-3">Cư trú</th>
+              <th class="py-3 px-3 text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="dataTableBody" class="divide-y divide-slate-100 font-normal">
+            <!-- Render động bằng JS -->
+          </tbody>
+        </table>
       </div>
 
-      <!-- Village Comparison Summary -->
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h3 class="font-bold text-slate-800 text-sm sm:text-base mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-map-location-dot text-emerald-600"></i>
-          Thống Kê Tiến Độ Phổ Cập Từng Thôn / Bản
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left text-slate-700 border border-slate-200">
-            <thead class="bg-slate-50 font-semibold text-slate-600 uppercase">
-              <tr>
-                <th class="p-3 border border-slate-200">Thôn / Bản / Khu dân cư</th>
-                <th class="p-3 border border-slate-200 text-center">Số đối tượng</th>
-                <th class="p-3 border border-slate-200 text-center">Mầm non (0-5t)</th>
-                <th class="p-3 border border-slate-200 text-center">Tiểu học (6-10t)</th>
-                <th class="p-3 border border-slate-200 text-center">THCS (11-14t)</th>
-                <th class="p-3 border border-slate-200 text-center">Số trẻ chưa ra lớp / Bỏ học</th>
-                <th class="p-3 border border-slate-200 text-center">Tỷ lệ đến trường</th>
-              </tr>
-            </thead>
-            <tbody id="villageStatsTableBody" class="divide-y divide-slate-200">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==============================================
-         TAB 5: QUẢN LÝ DỮ LIỆU & CÀI ĐẶT (SETTINGS)
-    =============================================== -->
-    <section id="tab-dataManager" class="tab-content hidden space-y-6">
-      
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-          <i class="fa-solid fa-server text-sky-600"></i>
-          Quản Lý Lưu Trữ & Sao Lưu Dữ Liệu
-        </h2>
-        <p class="text-xs text-slate-500 mb-6">Toàn bộ dữ liệu được lưu an toàn trực tiếp trên trình duyệt của máy bạn (LocalStorage). Bạn có thể sao lưu ra tệp hoặc chuyển dữ liệu sang thiết bị khác.</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- Card 1: Xuất Excel -->
-          <div class="border border-emerald-200 rounded-xl p-4 bg-emerald-50/30 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center space-x-2 text-emerald-700 font-bold mb-2">
-                <i class="fa-solid fa-file-excel text-lg"></i>
-                <span>Xuất File Excel (.xlsx)</span>
-              </div>
-              <p class="text-xs text-slate-600 mb-4">Tạo báo cáo chi tiết toàn bộ hồ sơ phổ cập định dạng Excel chuẩn để gửi nộp cấp trên hoặc in ấn.</p>
-            </div>
-            <button onclick="exportToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center space-x-2 transition shadow-sm">
-              <i class="fa-solid fa-download"></i>
-              <span>Tải Xuống Tệp Excel</span>
-            </button>
-          </div>
-
-          <!-- Card 2: Sao lưu JSON -->
-          <div class="border border-sky-200 rounded-xl p-4 bg-sky-50/30 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center space-x-2 text-sky-700 font-bold mb-2">
-                <i class="fa-solid fa-cloud-arrow-down text-lg"></i>
-                <span>Sao Lưu Dự Phòng (JSON)</span>
-              </div>
-              <p class="text-xs text-slate-600 mb-4">Tải về toàn bộ cơ sở dữ liệu dạng file cấu trúc JSON. An toàn tuyệt đối tránh mất mát dữ liệu.</p>
-            </div>
-            <button onclick="exportBackupJSON()" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center space-x-2 transition shadow-sm">
-              <i class="fa-solid fa-file-export"></i>
-              <span>Tải Bản Sao Lưu JSON</span>
-            </button>
-          </div>
-
-          <!-- Card 3: Phục hồi JSON -->
-          <div class="border border-purple-200 rounded-xl p-4 bg-purple-50/30 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center space-x-2 text-purple-700 font-bold mb-2">
-                <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
-                <span>Khôi Phục Dữ Liệu</span>
-              </div>
-              <p class="text-xs text-slate-600 mb-4">Nạp dữ liệu từ tệp sao lưu JSON đã lưu từ máy tính hoặc điện thoại khác.</p>
-            </div>
-            <div>
-              <input type="file" id="importJsonFileInput" accept=".json" class="hidden" onchange="handleImportJSON(event)">
-              <button onclick="document.getElementById('importJsonFileInput').click()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center space-x-2 transition shadow-sm">
-                <i class="fa-solid fa-file-import"></i>
-                <span>Chọn Tệp JSON Khôi Phục</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Danger & Reset zone -->
-        <div class="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div>
-            <h4 class="text-xs font-bold text-slate-700 uppercase">Khôi phục bộ dữ liệu mẫu ban đầu</h4>
-            <p class="text-xs text-slate-500">Nạp lại 14 hồ sơ mẫu đầy đủ độ tuổi từ Mầm non đến THCS của các thôn bản để kiểm tra tính năng.</p>
-          </div>
-          <button onclick="confirmResetSampleData()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold py-2 px-3.5 rounded-lg transition">
-            <i class="fa-solid fa-rotate-left mr-1"></i> Nạp Dữ Liệu Mẫu Chuẩn
-          </button>
-        </div>
+      <!-- Footer thông báo số lượng -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+        <span id="recordCountText">Hiển thị 0 đối tượng</span>
+        <span>Dữ liệu lưu tự động trên thiết bị</span>
       </div>
     </section>
   </main>
 
-  <!-- MODAL: THÊM / CHỈNH SỬA ĐỐI TƯỢNG ĐIỀU TRA -->
-  <div id="addStudentModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden border border-slate-200 transform transition-all max-h-[92vh] flex flex-col">
+  <!-- MODAL FORM NHẬP / SỬA PHIẾU ĐIỀU TRA -->
+  <div id="entryModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-3 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden my-auto">
       
       <!-- Modal Header -->
-      <div class="px-5 py-4 bg-gradient-to-r from-sky-700 to-teal-700 text-white flex justify-between items-center">
-        <h3 class="font-bold text-base flex items-center gap-2" id="modalTitle">
-          <i class="fa-solid fa-user-plus text-amber-300"></i>
-          <span>Thêm Mới Đối Tượng Điều Tra Phổ Cập</span>
+      <div class="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center">
+        <h3 id="modalTitle" class="text-base font-bold flex items-center gap-2">
+          <i class="fa-solid fa-address-card"></i> Nhập Thông Tin Phiếu Điều Tra PCGD
         </h3>
-        <button onclick="closeModal('addStudentModal')" class="text-white/80 hover:text-white p-1 rounded-lg">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+        <button onclick="closeModal()" class="text-white hover:text-rose-200 text-xl font-bold">&times;</button>
       </div>
 
-      <!-- Modal Body (Form) -->
-      <form id="studentForm" onsubmit="saveStudentForm(event)" class="p-5 overflow-y-auto space-y-4 flex-grow text-xs">
-        <input type="hidden" id="editStudentId">
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Mã định danh / Số CCCD <span class="text-red-500">*</span></label>
-            <input type="text" id="formCccd" required placeholder="Nhập 12 số định danh cá nhân..." class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Họ và tên đối tượng <span class="text-red-500">*</span></label>
-            <input type="text" id="formFullName" required placeholder="Ví dụ: Nguyễn Văn An" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none font-medium">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Ngày tháng năm sinh <span class="text-red-500">*</span></label>
-            <input type="date" id="formDob" required onchange="updateCalculatedAgePreview()" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-            <span id="calculatedAgeNotice" class="text-[10px] text-sky-600 font-semibold block mt-0.5">-- Tuổi: tự động tính --</span>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Giới tính <span class="text-red-500">*</span></label>
-            <select id="formGender" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-              <option value="Nam">Nam</option>
-              <option value="Nữ">Nữ</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Dân tộc <span class="text-red-500">*</span></label>
-            <input type="text" id="formEthnicity" value="Kinh" required class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-          </div>
-        </div>
-
-        <!-- Family details -->
-        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <!-- Modal Body (Tabs & Inputs) -->
+      <div class="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+        
+        <!-- Tab 1: Thông tin đối tượng điều tra -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h4 class="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-xs">1</span>
+            Thông Tin Cá Nhân Đối Tượng
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Họ và tên đầy đủ <span class="text-rose-500">*</span></label>
+              <input type="text" id="inpFullName" onblur="handleAutoSplitName(this.value)" placeholder="Ví dụ: Đỗ Văn Dũng" 
+                     class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Họ tên chủ hộ / Cha mẹ <span class="text-red-500">*</span></label>
-              <input type="text" id="formHouseholdHead" required placeholder="Ví dụ: Nguyễn Văn Hùng" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Họ đệm</label>
+              <input type="text" id="inpHodem" placeholder="Đỗ Văn" class="w-full px-3 py-2 border rounded-md bg-slate-100 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Tên <span class="text-rose-500">*</span></label>
+              <input type="text" id="inpTen" placeholder="Dũng" class="w-full px-3 py-2 border rounded-md bg-slate-100 outline-none font-semibold">
             </div>
 
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Quan hệ với chủ hộ</label>
-              <select id="formHouseholdRelation" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-                <option value="Con">Con</option>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Ngày sinh</label>
+              <input type="number" id="inpNgay" min="1" max="31" placeholder="Ngày" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Tháng sinh</label>
+              <input type="number" id="inpThang" min="1" max="12" placeholder="Tháng" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Năm sinh <span class="text-rose-500">*</span></label>
+              <input type="number" id="inpNam" min="1930" max="2030" placeholder="Năm sinh" class="w-full px-3 py-2 border rounded-md outline-none font-semibold">
+            </div>
+            <div class="flex items-center pt-5">
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="inpNu" class="w-4 h-4 text-emerald-600 rounded">
+                <span class="text-sm font-semibold text-slate-700">Giới tính Nữ (x)</span>
+              </label>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Dân tộc</label>
+              <input type="text" id="inpDanToc" value="Kinh" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Tôn giáo</label>
+              <input type="text" id="inpTonGiao" placeholder="Không" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Diện ưu tiên</label>
+              <input type="text" id="inpUuTien" placeholder="Hộ nghèo, dân tộc thiểu số..." class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Hộ gia đình và nơi ở (Hỗ trợ giữ nguyên khi nhập cùng hộ) -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <div class="flex justify-between items-center mb-3">
+            <h4 class="font-bold text-emerald-800 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-xs">2</span>
+              Thông Tin Hộ Gia Đình & Nơi Ở
+            </h4>
+            <span class="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-medium">
+              <i class="fa-solid fa-lightbulb"></i> Giữ nguyên khi nhập các thành viên cùng gia đình
+            </span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Số phiếu điều tra <span class="text-rose-500">*</span></label>
+              <input type="text" id="inpSoPhieu" placeholder="VD: THINHKIM001" class="w-full px-3 py-2 border rounded-md font-mono uppercase font-bold outline-none">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Họ tên Chủ hộ</label>
+              <input type="text" id="inpChuHo" onblur="handleAutoSplitChuHo(this.value)" placeholder="Ví dụ: Đỗ Văn Đồng" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Quan hệ với chủ hộ</label>
+              <select id="inpQuanHe" class="w-full px-3 py-2 border rounded-md outline-none bg-white">
+                <option value="Chủ hộ">Chủ hộ</option>
+                <option value="Vợ">Vợ</option>
+                <option value="Chồng">Chồng</option>
+                <option value="Con" selected>Con</option>
+                <option value="Bố">Bố</option>
+                <option value="Mẹ">Mẹ</option>
                 <option value="Cháu">Cháu</option>
-                <option value="Chủ hộ">Bản thân là chủ hộ</option>
-                <option value="Khác">Quan hệ khác</option>
+                <option value="Khác">Khác</option>
               </select>
             </div>
 
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Địa chỉ: Thôn / Tổ / Xóm <span class="text-rose-500">*</span></label>
+              <input type="text" id="inpDiaChi" placeholder="VD: Thịnh Kim" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Số điện thoại liên hệ</label>
-              <input type="tel" id="formPhone" placeholder="098..." class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Diện cư trú</label>
+              <select id="inpDienCuTru" class="w-full px-3 py-2 border rounded-md outline-none bg-white">
+                <option value="Thường trú" selected>Thường trú</option>
+                <option value="Tạm trú">Tạm trú</option>
+                <option value="Vãng lai">Vãng lai</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Tình trạng cư trú</label>
+              <input type="text" id="inpTinhTrangCuTru" placeholder="Bình thường / Đi làm xa..." class="w-full px-3 py-2 border rounded-md outline-none">
             </div>
           </div>
+        </div>
 
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Địa bàn: Thôn / Bản / Tổ dân phố <span class="text-red-500">*</span></label>
-            <input type="text" id="formAddressGroup" required placeholder="Ví dụ: Thôn 1, Bản Hang Cọ..." class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
+        <!-- Tab 3: Học vấn & Tốt nghiệp -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h4 class="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-xs">3</span>
+            Thông Tin Học Tập & Trình Độ Tốt Nghiệp
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Đang học: Khối / Lớp</label>
+              <div class="flex gap-1">
+                <input type="text" id="inpKhoiHoc" placeholder="Khối" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+                <input type="text" id="inpLopHoc" placeholder="Lớp (VD: 5A1)" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Mã trường đang học</label>
+              <input type="text" id="inpMaTruong" placeholder="Mã trường" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Bậc tốt nghiệp cao nhất</label>
+              <select id="inpBacTN" class="w-full px-3 py-2 border rounded-md outline-none bg-white">
+                <option value="">-- Chưa TN --</option>
+                <option value="Mầm non">Mầm non</option>
+                <option value="Tiểu học">Tiểu học</option>
+                <option value="THCS">THCS</option>
+                <option value="THPT">THPT</option>
+                <option value="TC">Trung cấp</option>
+                <option value="CĐ">Cao đẳng</option>
+                <option value="ĐH">Đại học</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Năm tốt nghiệp</label>
+              <input type="text" id="inpNamTN" placeholder="VD: 1995-1996" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Bổ túc (x)</label>
+              <input type="text" id="inpBoTuc" placeholder="x nếu học GDTX" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Bậc TN Nghề / Năm</label>
+              <div class="flex gap-1">
+                <input type="text" id="inpBacTNNghe" placeholder="Bậc nghề" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+                <input type="text" id="inpNamTNNghe" placeholder="Năm TN" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Học xong (Lớp / Năm)</label>
+              <div class="flex gap-1">
+                <input type="text" id="inpHocXongLop" placeholder="Lớp" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+                <input type="text" id="inpHocXongNam" placeholder="Năm" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Bỏ học (Lớp / Năm)</label>
+              <div class="flex gap-1">
+                <input type="text" id="inpBoHocLop" placeholder="Lớp" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+                <input type="text" id="inpBoHocNam" placeholder="Năm" class="w-1/2 px-2 py-2 border rounded-md outline-none">
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Schooling details -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Trường học hiện tại</label>
-            <input type="text" id="formCurrentSchool" placeholder="Ví dụ: TH Tân Tiến, MN Hoa Sen..." class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-          </div>
+        <!-- Tab 4: Xóa mù chữ & Khuyết tật & Hoàn cảnh -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h4 class="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-emerald-600 text-white inline-flex items-center justify-center text-xs">4</span>
+            Xóa Mù Chữ, Khuyết Tật & Liên Lạc
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">XMC: Đang học lớp</label>
+              <input type="text" id="inpXMCDangHoc" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">XMC: Hoàn thành lớp</label>
+              <input type="text" id="inpXMCHoanThanh" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Tái mù chữ mức</label>
+              <input type="text" id="inpTaiMuChu" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Khuyết tật</label>
+              <select id="inpKhuyetTatType" class="w-full px-3 py-2 border rounded-md outline-none bg-white">
+                <option value="">-- Không khuyết tật --</option>
+                <option value="van_dong">Vận động</option>
+                <option value="nghe_noi">Nghe nói</option>
+                <option value="nhin">Nhìn</option>
+                <option value="than_kinh">Thần kinh, tâm thần</option>
+                <option value="tri_tue">Trí tuệ</option>
+                <option value="hoc_tap">Học tập</option>
+                <option value="tu_ky">Tự kỷ</option>
+                <option value="khac">Khác</option>
+              </select>
+            </div>
 
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Lớp / Nhóm lớp</label>
-            <input type="text" id="formCurrentGrade" placeholder="Ví dụ: Lớp 1A, Mẫu giáo 5-6t, Lớp 7B..." class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
+            <div class="md:col-span-2">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Họ tên Cha hoặc Mẹ</label>
+              <input type="text" id="inpHotenChaMe" placeholder="Họ tên cha hoặc mẹ" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Số điện thoại</label>
+              <input type="text" id="inpDienThoai" placeholder="Số điện thoại liên hệ" class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Ghi chú</label>
+              <input type="text" id="inpGhiChu" placeholder="Ghi chú thêm..." class="w-full px-3 py-2 border rounded-md outline-none">
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Tình trạng học tập <span class="text-red-500">*</span></label>
-            <select id="formStatus" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-              <option value="DungDoTuoi">Đang học đúng độ tuổi</option>
-              <option value="TraiTuyen">Đang học trường khác / Trái tuyến</option>
-              <option value="HoanThanh">Đã hoàn thành cấp học</option>
-              <option value="ChuaDiHoc">Chưa đi học / Chưa ra lớp</option>
-              <option value="BoHoc">Bỏ học giữa chừng</option>
-              <option value="ChuyenDi">Chuyển đi nơi khác</option>
-            </select>
-          </div>
+      </div>
 
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Diện chính sách / Khuyết tật</label>
-            <select id="formPolicyType" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-              <option value="Bình thường">Bình thường</option>
-              <option value="Hộ nghèo">Hộ nghèo</option>
-              <option value="Hộ cận nghèo">Hộ cận nghèo</option>
-              <option value="Khuyết tật">Khuyết tật</option>
-              <option value="Mồ côi">Trẻ mồ côi</option>
-            </select>
-          </div>
+      <!-- Modal Footer -->
+      <div class="bg-slate-100 px-6 py-3 border-t border-slate-200 flex flex-wrap justify-between items-center gap-2">
+        <div class="flex items-center gap-2">
+          <label class="inline-flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+            <input type="checkbox" id="keepHouseholdCheck" checked class="w-4 h-4 text-emerald-600 rounded">
+            <span>Giữ thông tin Hộ & Địa chỉ để nhập thành viên kế tiếp</span>
+          </label>
         </div>
-
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">Ghi chú bổ sung</label>
-          <input type="text" id="formNotes" placeholder="Ví dụ: Hoàn cảnh đặc biệt, đi theo mẹ làm ăn xa..." class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
-        </div>
-
-        <!-- Footer Actions inside Form -->
-        <div class="pt-4 border-t border-slate-200 flex justify-end space-x-2">
-          <button type="button" onclick="closeModal('addStudentModal')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition">
-            Hủy Bỏ
+        <div class="flex gap-2">
+          <button onclick="closeModal()" class="px-4 py-2 border border-slate-300 rounded-md text-slate-600 hover:bg-slate-200 font-medium transition">Đóng</button>
+          <button onclick="saveRecord()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-semibold transition flex items-center gap-1">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu đối tượng
           </button>
-          <button type="submit" class="px-5 py-2 bg-sky-700 hover:bg-sky-800 text-white rounded-lg font-semibold shadow-sm transition">
-            Lưu Thông Tin
-          </button>
         </div>
-      </form>
+      </div>
+
     </div>
   </div>
 
-  <!-- MODAL: XÁC NHẬN (Thay thế confirm() browser) -->
-  <div id="confirmModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4 text-center">
-      <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-      </div>
-      <div>
-        <h4 class="font-bold text-slate-800 text-base" id="confirmModalTitle">Xác nhận thao tác</h4>
-        <p class="text-xs text-slate-500 mt-1" id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
-      </div>
-      <div class="flex space-x-2 justify-center pt-2">
-        <button id="confirmCancelBtn" class="px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 transition">Hủy</button>
-        <button id="confirmAcceptBtn" class="px-4 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition">Đồng ý</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST CONTAINER -->
-  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
-
-  <footer class="no-print bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
-      <p>© 2026 EduPCGD - Ứng dụng Hỗ trợ Giáo viên Phổ cập Giáo dục. Tối ưu cho máy tính bảng & di động.</p>
-      <div class="flex items-center space-x-3 text-slate-400">
-        <span>Tiêu chuẩn: Thông tư 19/2016/TT-BGDĐT</span>
-        <span>•</span>
-        <button onclick="switchTab('dataManager')" class="text-sky-600 hover:underline">Sao lưu dữ liệu</button>
-      </div>
-    </div>
-  </footer>
-
+  <!-- JavaScript Logic -->
   <script>
-    /* =========================================================
-       1. DATA STRUCTURE & INITIAL SAMPLE DATA (14 RECORDS)
-    ========================================================== */
-    const STORAGE_KEY = 'edu_pcgd_records_v2026';
-    const CURRENT_YEAR = 2026;
+    // Khởi tạo State ứng dụng
+    const STORAGE_KEY = 'PCGD_DATA_STORE_V1';
+    let dataList = [];
+    let editingId = null;
 
-    // Realistic preloaded data across kindergarten, primary, lower secondary
-    const INITIAL_SAMPLE_DATA = [
-      {
-        id: "PC-001",
-        cccd: "025220001001",
-        fullName: "Nguyễn Minh Khang",
-        dob: "2020-04-12",
-        gender: "Nam",
-        ethnicity: "Kinh",
-        householdHead: "Nguyễn Văn Tuấn",
-        householdRelation: "Con",
-        phone: "0912345671",
-        addressGroup: "Thôn 1",
-        currentSchool: "Tiểu học Tân Tiến",
-        currentGrade: "Lớp 1A",
-        status: "DungDoTuoi",
-        policyType: "Bình thường",
-        notes: "Đã vào lớp 1 đúng độ tuổi"
-      },
-      {
-        id: "PC-002",
-        cccd: "025220001002",
-        fullName: "Trần Bảo Ngọc",
-        dob: "2020-08-25",
-        gender: "Nữ",
-        ethnicity: "Mường",
-        householdHead: "Trần Văn Cường",
-        householdRelation: "Con",
-        phone: "0912345672",
-        addressGroup: "Thôn 1",
-        currentSchool: "Chưa nhập học",
-        currentGrade: "Chưa ra lớp",
-        status: "ChuaDiHoc",
-        policyType: "Hộ nghèo",
-        notes: "6 tuổi chưa nhập học lớp 1, cần thầy cô đến vận động gia đình"
-      },
-      {
-        id: "PC-003",
-        cccd: "025221001003",
-        fullName: "Hoàng Anh Dũng",
-        dob: "2021-02-10",
-        gender: "Nam",
-        ethnicity: "Kinh",
-        householdHead: "Hoàng Văn Nam",
-        householdRelation: "Con",
-        phone: "0912345673",
-        addressGroup: "Thôn 2",
-        currentSchool: "Mầm non Hoa Sen",
-        currentGrade: "Mẫu giáo 5-6 tuổi",
-        status: "DungDoTuoi",
-        policyType: "Bình thường",
-        notes: "Chăm ngoan, đi học đều"
-      },
-      {
-        id: "PC-004",
-        cccd: "025222001004",
-        fullName: "Lê Quỳnh Chi",
-        dob: "2022-11-05",
-        gender: "Nữ",
-        ethnicity: "Kinh",
-        householdHead: "Lê Đức Thắng",
-        householdRelation: "Con",
-        phone: "0912345674",
-        addressGroup: "Thôn 2",
-        currentSchool: "Mầm non Hoa Sen",
-        currentGrade: "Lớp bé 3-4 tuổi",
-        status: "DungDoTuoi",
-        policyType: "Bình thường",
-        notes: "Đang học mầm non"
-      },
-      {
-        id: "PC-005",
-        cccd: "025218001005",
-        fullName: "Đinh Văn Long",
-        dob: "2018-03-15",
-        gender: "Nam",
-        ethnicity: "Mường",
-        householdHead: "Đinh Văn Hùng",
-        householdRelation: "Con",
-        phone: "0912345675",
-        addressGroup: "Bản Hang Cọ",
-        currentSchool: "Tiểu học Tân Tiến",
-        currentGrade: "Lớp 3B",
-        status: "DungDoTuoi",
-        policyType: "Hộ cận nghèo",
-        notes: "Đầy đủ sách vở"
-      },
-      {
-        id: "PC-006",
-        cccd: "025216001006",
-        fullName: "Triệu Thị Mai",
-        dob: "2016-09-18",
-        gender: "Nữ",
-        ethnicity: "Dao",
-        householdHead: "Triệu Văn Lầu",
-        householdRelation: "Con",
-        phone: "0912345676",
-        addressGroup: "Bản Hang Cọ",
-        currentSchool: "Tiểu học Tân Tiến",
-        currentGrade: "Lớp 5A",
-        status: "DungDoTuoi",
-        policyType: "Khuyết tật",
-        notes: "Khuyết tật vận động nhẹ, học hòa nhập tốt"
-      },
-      {
-        id: "PC-007",
-        cccd: "025214001007",
-        fullName: "Phạm Gia Huy",
-        dob: "2014-06-20",
-        gender: "Nam",
-        ethnicity: "Kinh",
-        householdHead: "Phạm Quốc Tuấn",
-        householdRelation: "Con",
-        phone: "0912345677",
-        addressGroup: "Thôn 3",
-        currentSchool: "THCS Tân Tiến",
-        currentGrade: "Lớp 7A",
-        status: "DungDoTuoi",
-        policyType: "Bình thường",
-        notes: "Học sinh giỏi cấp trường"
-      },
-      {
-        id: "PC-008",
-        cccd: "025212001008",
-        fullName: "Lý Seo Pao",
-        dob: "2012-01-14",
-        gender: "Nam",
-        ethnicity: "Mông",
-        householdHead: "Lý A Tủa",
-        householdRelation: "Con",
-        phone: "0912345678",
-        addressGroup: "Bản Đỉnh Đồi",
-        currentSchool: "Đã nghỉ",
-        currentGrade: "Nghỉ từ lớp 8",
-        status: "BoHoc",
-        policyType: "Hộ nghèo",
-        notes: "Nghỉ học phụ bố mẹ làm nương rẫy, trường đã cử đoàn vận động"
-      },
-      {
-        id: "PC-009",
-        cccd: "025211001009",
-        fullName: "Vũ Phương Linh",
-        dob: "2011-12-04",
-        gender: "Nữ",
-        ethnicity: "Kinh",
-        householdHead: "Vũ Hải Đăng",
-        householdRelation: "Con",
-        phone: "0912345679",
-        addressGroup: "Thôn 1",
-        currentSchool: "THCS Tân Tiến",
-        currentGrade: "Lớp 9B",
-        status: "DungDoTuoi",
-        policyType: "Bình thường",
-        notes: "Chuẩn bị thi vào lớp 10"
-      },
-      {
-        id: "PC-010",
-        cccd: "025210001010",
-        fullName: "Bùi Thanh Tùng",
-        dob: "2010-07-08",
-        gender: "Nam",
-        ethnicity: "Mường",
-        householdHead: "Bùi Văn Thảo",
-        householdRelation: "Con",
-        phone: "0912345680",
-        addressGroup: "Thôn 3",
-        currentSchool: "Trung cấp Nghề Tỉnh",
-        currentGrade: "Lớp Nghề Điện",
-        status: "HoanThanh",
-        policyType: "Bình thường",
-        notes: "Tốt nghiệp THCS năm 2025, đang học nghề"
-      },
-      {
-        id: "PC-011",
-        cccd: "025224001011",
-        fullName: "Nguyễn Hải Đăng",
-        dob: "2024-05-10",
-        gender: "Nam",
-        ethnicity: "Kinh",
-        householdHead: "Nguyễn Văn Tuấn",
-        householdRelation: "Con",
-        phone: "0912345671",
-        addressGroup: "Thôn 1",
-        currentSchool: "Ở nhà",
-        currentGrade: "Trẻ 2 tuổi",
-        status: "DungDoTuoi",
-        policyType: "Bình thường",
-        notes: "Dưới 3 tuổi, mẹ chăm sóc tại nhà"
-      },
-      {
-        id: "PC-012",
-        cccd: "025219001012",
-        fullName: "Đỗ Kim Ngân",
-        dob: "2019-10-10",
-        gender: "Nữ",
-        ethnicity: "Kinh",
-        householdHead: "Đỗ Văn Thành",
-        householdRelation: "Con",
-        phone: "0912345681",
-        addressGroup: "Thôn 2",
-        currentSchool: "TH Tư thục Ngôi Sao",
-        currentGrade: "Lớp 2A",
-        status: "TraiTuyen",
-        policyType: "Bình thường",
-        notes: "Gia đình cho học trường ngoài địa bàn xã"
-      },
-      {
-        id: "PC-013",
-        cccd: "025215001013",
-        fullName: "Hà Văn Dũng",
-        dob: "2015-04-03",
-        gender: "Nam",
-        ethnicity: "Thái",
-        householdHead: "Hà Văn Mừng",
-        householdRelation: "Con",
-        phone: "0912345682",
-        addressGroup: "Bản Hang Cọ",
-        currentSchool: "Đã chuyển trường",
-        currentGrade: "Không rõ",
-        status: "ChuyenDi",
-        policyType: "Bình thường",
-        notes: "Chuyển theo gia đình vào Bình Dương từ tháng 1/2026"
-      },
-      {
-        id: "PC-014",
-        cccd: "025220001014",
-        fullName: "Hoàng Gia Bảo",
-        dob: "2020-01-30",
-        gender: "Nam",
-        ethnicity: "Kinh",
-        householdHead: "Hoàng Văn Nam",
-        householdRelation: "Con",
-        phone: "0912345673",
-        addressGroup: "Thôn 2",
-        currentSchool: "Tiểu học Tân Tiến",
-        currentGrade: "Lớp 1B",
-        status: "DungDoTuoi",
-        policyType: "Bình thường",
-        notes: "Học tập tiến bộ"
+    // Tự động load dữ liệu khi vào trang
+    window.addEventListener('DOMContentLoaded', () => {
+      loadFromStorage();
+      updateThonFilterOptions();
+      renderTable();
+      updateStatistics();
+    });
+
+    // 1. Quản lý lưu trữ LocalStorage
+    function loadFromStorage() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          dataList = JSON.parse(stored);
+        } catch (e) {
+          console.error("Lỗi đọc cache:", e);
+          dataList = [];
+        }
       }
-    ];
+    }
 
-    // Local state
-    let students = [];
-    let ageChartInstance = null;
-    let statusChartInstance = null;
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataList));
+      updateThonFilterOptions();
+      renderTable();
+      updateStatistics();
+    }
 
-    function loadData() {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          students = JSON.parse(stored);
+    // 2. Tự động tách Họ đệm & Tên
+    function handleAutoSplitName(fullName) {
+      if (!fullName) return;
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length === 1) {
+        document.getElementById('inpHodem').value = '';
+        document.getElementById('inpTen').value = parts[0];
+      } else {
+        const ten = parts.pop();
+        const hodem = parts.join(' ');
+        document.getElementById('inpHodem').value = hodem;
+        document.getElementById('inpTen').value = ten;
+      }
+    }
+
+    function handleAutoSplitChuHo(fullName) {
+      // Tự động gợi ý tên cha mẹ nếu người đó là con
+      const quanHe = document.getElementById('inpQuanHe').value;
+      if (quanHe === 'Con' && !document.getElementById('inpHotenChaMe').value) {
+        document.getElementById('inpHotenChaMe').value = fullName;
+      }
+    }
+
+    // 3. Mở & Đóng Modal
+    function openModal(id = null) {
+      editingId = id;
+      const modal = document.getElementById('entryModal');
+      modal.classList.remove('hidden');
+
+      if (id !== null) {
+        // Chế độ chỉnh sửa
+        document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Cập Nhật Phiếu Điều Tra';
+        const item = dataList.find(x => x.id === id);
+        if (item) populateForm(item);
+      } else {
+        // Chế độ thêm mới
+        document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-address-card"></i> Nhập Thông Tin Phiếu Điều Tra PCGD';
+        const keep = document.getElementById('keepHouseholdCheck').checked;
+        if (!keep) {
+          clearForm();
         } else {
-          students = JSON.parse(JSON.stringify(INITIAL_SAMPLE_DATA));
-          saveDataToLocalStorage();
+          // Xóa thông tin cá nhân, giữ thông tin hộ
+          document.getElementById('inpFullName').value = '';
+          document.getElementById('inpHodem').value = '';
+          document.getElementById('inpTen').value = '';
+          document.getElementById('inpNgay').value = '';
+          document.getElementById('inpThang').value = '';
+          document.getElementById('inpNam').value = '';
+          document.getElementById('inpNu').checked = false;
+          document.getElementById('inpKhoiHoc').value = '';
+          document.getElementById('inpLopHoc').value = '';
+          document.getElementById('inpBacTN').value = '';
+          document.getElementById('inpNamTN').value = '';
+          document.getElementById('inpKhuyetTatType').value = '';
         }
-      } catch (err) {
-        console.error("Lỗi đọc dữ liệu:", err);
-        students = JSON.parse(JSON.stringify(INITIAL_SAMPLE_DATA));
       }
     }
 
-    function saveDataToLocalStorage() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-      } catch (e) {
-        showToast("Không thể lưu bộ nhớ trình duyệt", "error");
+    function closeModal() {
+      document.getElementById('entryModal').classList.add('hidden');
+      editingId = null;
+    }
+
+    function clearForm() {
+      const inputs = document.querySelectorAll('#entryModal input, #entryModal select');
+      inputs.forEach(inp => {
+        if (inp.type === 'checkbox') inp.checked = false;
+        else if (inp.id === 'inpDanToc') inp.value = 'Kinh';
+        else if (inp.id === 'inpDienCuTru') inp.value = 'Thường trú';
+        else if (inp.id === 'inpQuanHe') inp.value = 'Con';
+        else if (inp.id !== 'keepHouseholdCheck') inp.value = '';
+      });
+    }
+
+    function populateForm(d) {
+      document.getElementById('inpHodem').value = d.hoDem || '';
+      document.getElementById('inpTen').value = d.ten || '';
+      document.getElementById('inpFullName').value = (d.hoDem ? d.hoDem + ' ' : '') + (d.ten || '');
+      document.getElementById('inpNgay').value = d.ngay || '';
+      document.getElementById('inpThang').value = d.thang || '';
+      document.getElementById('inpNam').value = d.nam || '';
+      document.getElementById('inpNu').checked = !!d.nu;
+      document.getElementById('inpDanToc').value = d.danToc || 'Kinh';
+      document.getElementById('inpTonGiao').value = d.tonGiao || '';
+      document.getElementById('inpUuTien').value = d.uuTien || '';
+
+      document.getElementById('inpChuHo').value = (d.chuHoHoDem ? d.chuHoHoDem + ' ' : '') + (d.chuHoTen || '');
+      document.getElementById('inpDiaChi').value = d.diaChi || '';
+      document.getElementById('inpSoPhieu').value = d.soPhieu || '';
+      document.getElementById('inpDienCuTru').value = d.dienCuTru || 'Thường trú';
+      document.getElementById('inpTinhTrangCuTru').value = d.tinhTrangCuTru || '';
+      document.getElementById('inpQuanHe').value = d.quanHe || 'Con';
+
+      document.getElementById('inpKhoiHoc').value = d.khoiHoc || '';
+      document.getElementById('inpLopHoc').value = d.lopHoc || '';
+      document.getElementById('inpMaTruong').value = d.maTruong || '';
+      document.getElementById('inpBacTN').value = d.bacTN || '';
+      document.getElementById('inpBoTuc').value = d.boTuc || '';
+      document.getElementById('inpNamTN').value = d.namTN || '';
+      document.getElementById('inpBacTNNghe').value = d.bacTNNghe || '';
+      document.getElementById('inpNamTNNghe').value = d.namTNNghe || '';
+      document.getElementById('inpHocXongLop').value = d.hocXongLop || '';
+      document.getElementById('inpHocXongNam').value = d.hocXongNam || '';
+      document.getElementById('inpBoHocLop').value = d.boHocLop || '';
+      document.getElementById('inpBoHocNam').value = d.boHocNam || '';
+
+      document.getElementById('inpXMCDangHoc').value = d.xmcDangHoc || '';
+      document.getElementById('inpXMCHoanThanh').value = d.xmcHoanThanh || '';
+      document.getElementById('inpTaiMuChu').value = d.taiMuChu || '';
+      document.getElementById('inpKhuyetTatType').value = d.khuyetTatType || '';
+
+      document.getElementById('inpHotenChaMe').value = d.hotenChaMe || '';
+      document.getElementById('inpDienThoai').value = d.dienThoai || '';
+      document.getElementById('inpGhiChu').value = d.ghiChu || '';
+    }
+
+    // 4. Lưu dữ liệu
+    function saveRecord() {
+      const ten = document.getElementById('inpTen').value.trim();
+      const nam = document.getElementById('inpNam').value.trim();
+      const soPhieu = document.getElementById('inpSoPhieu').value.trim();
+
+      if (!ten) {
+        alert("Vui lòng nhập Họ tên hoặc Tên đối tượng!");
+        document.getElementById('inpFullName').focus();
+        return;
       }
-    }
-
-    // Helper: calculate age accurately based on current year
-    function calculateAge(dobString) {
-      if (!dobString) return 0;
-      const birthYear = new Date(dobString).getFullYear();
-      return CURRENT_YEAR - birthYear;
-    }
-
-    function updateDashboard() {
-      const total = students.length;
-      
-      // Breakdown by education cohorts
-      const preschool = students.filter(s => {
-        const age = calculateAge(s.dob);
-        return age >= 0 && age <= 5;
-      });
-      
-      const primary = students.filter(s => {
-        const age = calculateAge(s.dob);
-        return age >= 6 && age <= 10;
-      });
-
-      const secondary = students.filter(s => {
-        const age = calculateAge(s.dob);
-        return age >= 11 && age <= 14;
-      });
-
-      // Exactly 6-year-olds
-      const sixYearsOld = students.filter(s => calculateAge(s.dob) === 6);
-      const sixYearsOldInSchool = sixYearsOld.filter(s => s.status === 'DungDoTuoi' || s.status === 'TraiTuyen');
-      const rate6yo = sixYearsOld.length > 0 ? Math.round((sixYearsOldInSchool.length / sixYearsOld.length) * 100) : 100;
-
-      // At risk: Chưa đi học, Bỏ học
-      const atRisk = students.filter(s => s.status === 'ChuaDiHoc' || s.status === 'BoHoc');
-
-      // Update KPI DOM
-      document.getElementById('kpiTotal').textContent = total;
-      document.getElementById('kpiPreSchool').textContent = preschool.length;
-      document.getElementById('kpiPrimary').textContent = primary.length;
-      document.getElementById('kpiSecondary').textContent = secondary.length;
-      document.getElementById('kpi6YearOldRate').textContent = `${rate6yo}%`;
-      document.getElementById('kpi6YearOldRatio').textContent = `${sixYearsOldInSchool.length}/${sixYearsOld.length} trẻ 6 tuổi`;
-      document.getElementById('kpiAtRisk').textContent = atRisk.length;
-
-      // Render Charts
-      renderCharts(preschool.length, primary.length, secondary.length);
-
-      // Render Warning Table
-      renderWarningList(atRisk);
-    }
-
-    function renderCharts(preCount, priCount, secCount) {
-      const postSecCount = students.filter(s => {
-        const a = calculateAge(s.dob);
-        return a >= 15 && a <= 18;
-      }).length;
-
-      // Bar Chart: Age Cohort
-      const ctxAge = document.getElementById('ageDistributionChart').getContext('2d');
-      if (ageChartInstance) ageChartInstance.destroy();
-      
-      ageChartInstance = new Chart(ctxAge, {
-        type: 'bar',
-        data: {
-          labels: ['Mầm non (0-5t)', 'Tiểu học (6-10t)', 'THCS (11-14t)', 'Sau THCS (15-18t)'],
-          datasets: [{
-            label: 'Số lượng trẻ em',
-            data: [preCount, priCount, secCount, postSecCount],
-            backgroundColor: [
-              'rgba(236, 72, 153, 0.85)',
-              'rgba(16, 185, 129, 0.85)',
-              'rgba(147, 51, 234, 0.85)',
-              'rgba(2, 132, 199, 0.85)'
-            ],
-            borderRadius: 6,
-            borderSkipped: false
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { stepSize: 2 }
-            }
-          }
-        }
-      });
-
-      // Status Doughnut Chart
-      const dungTuoi = students.filter(s => s.status === 'DungDoTuoi').length;
-      const traiTuyen = students.filter(s => s.status === 'TraiTuyen').length;
-      const hoanThanh = students.filter(s => s.status === 'HoanThanh').length;
-      const chuaDiHoc = students.filter(s => s.status === 'ChuaDiHoc').length;
-      const boHoc = students.filter(s => s.status === 'BoHoc').length;
-      const chuyenDi = students.filter(s => s.status === 'ChuyenDi').length;
-
-      const ctxStatus = document.getElementById('statusDoughnutChart').getContext('2d');
-      if (statusChartInstance) statusChartInstance.destroy();
-
-      statusChartInstance = new Chart(ctxStatus, {
-        type: 'doughnut',
-        data: {
-          labels: ['Đúng tuổi', 'Trái tuyến', 'Hoàn thành', 'Chưa đi học', 'Bỏ học', 'Chuyển đi'],
-          datasets: [{
-            data: [dungTuoi, traiTuyen, hoanThanh, chuaDiHoc, boHoc, chuyenDi],
-            backgroundColor: [
-              '#10b981', '#f59e0b', '#0284c7', '#ef4444', '#dc2626', '#94a3b8'
-            ]
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { boxWidth: 10, font: { size: 10 } }
-            }
-          }
-        }
-      });
-    }
-
-    function renderWarningList(atRiskList) {
-      const tbody = document.getElementById('warningTableBody');
-      const badge = document.getElementById('warningBadgeCount');
-      
-      // Also include special disability cases
-      const disabilities = students.filter(s => s.policyType === 'Khuyết tật' && !atRiskList.some(item => item.id === s.id));
-      const combined = [...atRiskList, ...disabilities];
-
-      badge.textContent = `${combined.length} trường hợp`;
-      tbody.innerHTML = '';
-
-      if (combined.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">Không có trường hợp cảnh báo đặc biệt nào. Toàn bộ đối tượng đều đến lớp đúng tiến độ!</td></tr>`;
+      if (!nam) {
+        alert("Vui lòng nhập Năm sinh của đối tượng!");
+        document.getElementById('inpNam').focus();
+        return;
+      }
+      if (!soPhieu) {
+        alert("Vui lòng nhập Số phiếu điều tra (VD: THINHKIM001)!");
+        document.getElementById('inpSoPhieu').focus();
         return;
       }
 
-      combined.forEach(s => {
-        const age = calculateAge(s.dob);
-        let statusBadge = '';
-        if (s.status === 'ChuaDiHoc') {
-          statusBadge = `<span class="bg-red-100 text-red-700 font-semibold px-2 py-0.5 rounded text-[11px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Chưa đi học (${age} tuổi)</span>`;
-        } else if (s.status === 'BoHoc') {
-          statusBadge = `<span class="bg-red-200 text-red-900 font-semibold px-2 py-0.5 rounded text-[11px]"><i class="fa-solid fa-person-walking-dashed-line-arrow-right mr-1"></i>Bỏ học</span>`;
-        } else if (s.policyType === 'Khuyết tật') {
-          statusBadge = `<span class="bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded text-[11px]"><i class="fa-solid fa-wheelchair mr-1"></i>Khuyết tật hòa nhập</span>`;
+      // Xử lý họ tên chủ hộ
+      const rawChuHo = document.getElementById('inpChuHo').value.trim();
+      let chuHoHoDem = '', chuHoTen = '';
+      if (rawChuHo) {
+        const parts = rawChuHo.split(/\s+/);
+        if (parts.length === 1) chuHoTen = parts[0];
+        else {
+          chuHoTen = parts.pop();
+          chuHoHoDem = parts.join(' ');
         }
+      }
 
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-red-50/30 transition';
-        tr.innerHTML = `
-          <td class="px-4 py-3 font-semibold text-slate-800">${escapeHtml(s.fullName)}</td>
-          <td class="px-4 py-3">${formatDate(s.dob)} <span class="text-slate-400 font-medium">(${age} tuổi)</span></td>
-          <td class="px-4 py-3 font-medium text-slate-700">${escapeHtml(s.addressGroup)}</td>
-          <td class="px-4 py-3">${escapeHtml(s.householdHead)} ${s.phone ? `<br><a href="tel:${s.phone}" class="text-sky-600 hover:underline text-[11px]"><i class="fa-solid fa-phone text-[9px]"></i> ${s.phone}</a>` : ''}</td>
-          <td class="px-4 py-3">${statusBadge}</td>
-          <td class="px-4 py-3 text-slate-500 italic max-w-xs truncate">${escapeHtml(s.notes || '--')}</td>
-          <td class="px-4 py-3 text-center">
-            <button onclick="editStudent('${s.id}')" class="text-sky-600 hover:text-sky-800 p-1.5 rounded hover:bg-sky-50 transition" title="Cập nhật thông tin">
-              <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
+      const record = {
+        id: editingId !== null ? editingId : Date.now(),
+        hoDem: document.getElementById('inpHodem').value.trim(),
+        ten: ten,
+        ngay: document.getElementById('inpNgay').value.trim(),
+        thang: document.getElementById('inpThang').value.trim(),
+        nam: parseInt(nam) || '',
+        nu: document.getElementById('inpNu').checked ? 'x' : '',
+        danToc: document.getElementById('inpDanToc').value.trim() || 'Kinh',
+        tonGiao: document.getElementById('inpTonGiao').value.trim(),
+        uuTien: document.getElementById('inpUuTien').value.trim(),
+
+        chuHoHoDem: chuHoHoDem,
+        chuHoTen: chuHoTen,
+        diaChi: document.getElementById('inpDiaChi').value.trim(),
+        soPhieu: soPhieu.toUpperCase(),
+        dienCuTru: document.getElementById('inpDienCuTru').value,
+        tinhTrangCuTru: document.getElementById('inpTinhTrangCuTru').value.trim(),
+        quanHe: document.getElementById('inpQuanHe').value,
+
+        khoiHoc: document.getElementById('inpKhoiHoc').value.trim(),
+        lopHoc: document.getElementById('inpLopHoc').value.trim(),
+        maTruong: document.getElementById('inpMaTruong').value.trim(),
+        bacTN: document.getElementById('inpBacTN').value,
+        boTuc: document.getElementById('inpBoTuc').value.trim(),
+        namTN: document.getElementById('inpNamTN').value.trim(),
+        bacTNNghe: document.getElementById('inpBacTNNghe').value.trim(),
+        namTNNghe: document.getElementById('inpNamTNNghe').value.trim(),
+        hocXongLop: document.getElementById('inpHocXongLop').value.trim(),
+        hocXongNam: document.getElementById('inpHocXongNam').value.trim(),
+        boHocLop: document.getElementById('inpBoHocLop').value.trim(),
+        boHocNam: document.getElementById('inpBoHocNam').value.trim(),
+
+        xmcDangHoc: document.getElementById('inpXMCDangHoc').value.trim(),
+        xmcHoanThanh: document.getElementById('inpXMCHoanThanh').value.trim(),
+        taiMuChu: document.getElementById('inpTaiMuChu').value.trim(),
+        khuyetTatType: document.getElementById('inpKhuyetTatType').value,
+
+        hotenChaMe: document.getElementById('inpHotenChaMe').value.trim(),
+        dienThoai: document.getElementById('inpDienThoai').value.trim(),
+        ghiChu: document.getElementById('inpGhiChu').value.trim()
+      };
+
+      if (editingId !== null) {
+        const index = dataList.findIndex(x => x.id === editingId);
+        if (index !== -1) dataList[index] = record;
+        editingId = null;
+        closeModal();
+      } else {
+        dataList.push(record);
+        const keep = document.getElementById('keepHouseholdCheck').checked;
+        if (keep) {
+          // Xóa trường cá nhân để nhập tiếp người trong hộ
+          document.getElementById('inpFullName').value = '';
+          document.getElementById('inpHodem').value = '';
+          document.getElementById('inpTen').value = '';
+          document.getElementById('inpNgay').value = '';
+          document.getElementById('inpThang').value = '';
+          document.getElementById('inpNam').value = '';
+          document.getElementById('inpNu').checked = false;
+          document.getElementById('inpKhoiHoc').value = '';
+          document.getElementById('inpLopHoc').value = '';
+          document.getElementById('inpBacTN').value = '';
+          document.getElementById('inpNamTN').value = '';
+          document.getElementById('inpFullName').focus();
+        } else {
+          closeModal();
+        }
+      }
+
+      saveToStorage();
     }
 
-    function renderStudentTable(dataToDisplay = students) {
-      const tbody = document.getElementById('studentTableBody');
-      const countLabel = document.getElementById('recordCount');
-      countLabel.textContent = dataToDisplay.length;
-      tbody.innerHTML = '';
+    function deleteRecord(id) {
+      if (confirm("Bạn có chắc chắn muốn xóa phiếu điều tra của đối tượng này?")) {
+        dataList = dataList.filter(x => x.id !== id);
+        saveToStorage();
+      }
+    }
 
-      if (dataToDisplay.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" class="text-center py-10 text-slate-400">Không tìm thấy đối tượng nào phù hợp với bộ lọc tìm kiếm.</td></tr>`;
+    function clearAllData() {
+      if (confirm("CẢNH BÁO: Thao tác này sẽ xóa toàn bộ danh sách điều tra hiện tại! Bạn có muốn tiếp tục?")) {
+        dataList = [];
+        saveToStorage();
+      }
+    }
+
+    // 5. Hiển thị Bảng & Lọc dữ liệu
+    function renderTable() {
+      const tbody = document.getElementById('dataTableBody');
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const filterThon = document.getElementById('filterThon').value;
+      const filterAge = document.getElementById('filterAgeGroup').value;
+
+      const currentYear = new Date().getFullYear();
+
+      const filtered = dataList.filter(item => {
+        // Tìm kiếm
+        const fullStr = `${item.hoDem} ${item.ten} ${item.soPhieu} ${item.chuHoHoDem} ${item.chuHoTen} ${item.diaChi}`.toLowerCase();
+        if (search && !fullStr.includes(search)) return false;
+
+        // Lọc thôn
+        if (filterThon && item.diaChi !== filterThon) return false;
+
+        // Lọc tuổi
+        if (filterAge && item.nam) {
+          const age = currentYear - item.nam;
+          if (filterAge === '0-5' && (age < 0 || age > 5)) return false;
+          if (filterAge === '6-10' && (age < 6 || age > 10)) return false;
+          if (filterAge === '11-14' && (age < 11 || age > 14)) return false;
+          if (filterAge === '15-18' && (age < 15 || age > 18)) return false;
+          if (filterAge === '15-60' && (age < 15 || age > 60)) return false;
+        }
+
+        return true;
+      });
+
+      document.getElementById('recordCountText').innerText = `Hiển thị ${filtered.length} / ${dataList.length} đối tượng`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" class="text-center py-8 text-slate-400">Không có dữ liệu phù hợp</td></tr>`;
         return;
       }
 
-      dataToDisplay.forEach((s, idx) => {
-        const age = calculateAge(s.dob);
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50/80 transition';
+      tbody.innerHTML = filtered.map((d, index) => {
+        const hoTen = `${d.hoDem ? d.hoDem + ' ' : ''}${d.ten}`;
+        const chuHo = `${d.chuHoHoDem ? d.chuHoHoDem + ' ' : ''}${d.chuHoTen}`;
+        const dob = [d.ngay, d.thang, d.nam].filter(Boolean).join('/');
+        const trinhDo = d.lopHoc ? `Lớp ${d.lopHoc}` : (d.bacTN ? `TN ${d.bacTN}` : '-');
 
-        let statusHtml = '';
-        switch(s.status) {
-          case 'DungDoTuoi':
-            statusHtml = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Đúng độ tuổi</span>`;
-            break;
-          case 'TraiTuyen':
-            statusHtml = `<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Trái tuyến / Ngoài xã</span>`;
-            break;
-          case 'HoanThanh':
-            statusHtml = `<span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Đã hoàn thành</span>`;
-            break;
-          case 'ChuaDiHoc':
-            statusHtml = `<span class="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap">Chưa đi học</span>`;
-            break;
-          case 'BoHoc':
-            statusHtml = `<span class="bg-red-100 text-red-900 border border-red-300 px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap">Bỏ học</span>`;
-            break;
-          case 'ChuyenDi':
-            statusHtml = `<span class="bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">Chuyển đi</span>`;
-            break;
-        }
-
-        let policyHtml = `<span class="text-slate-500">${escapeHtml(s.policyType || 'Bình thường')}</span>`;
-        if (s.policyType === 'Hộ nghèo' || s.policyType === 'Hộ cận nghèo') {
-          policyHtml = `<span class="bg-orange-50 text-orange-700 px-2 py-0.5 rounded font-medium">${s.policyType}</span>`;
-        } else if (s.policyType === 'Khuyết tật') {
-          policyHtml = `<span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-medium">Khuyết tật</span>`;
-        }
-
-        tr.innerHTML = `
-          <td class="px-3 py-3 text-center text-slate-400 font-medium">${idx + 1}</td>
-          <td class="px-3 py-3 font-mono text-[11px] font-medium text-slate-600">${escapeHtml(s.cccd)}</td>
-          <td class="px-3 py-3 font-semibold text-slate-900 whitespace-nowrap">${escapeHtml(s.fullName)}</td>
-          <td class="px-3 py-3 whitespace-nowrap">${formatDate(s.dob)} <span class="text-sky-600 font-bold">(${age}t)</span></td>
-          <td class="px-3 py-3 text-center">${s.gender === 'Nam' ? '<span class="text-blue-600 font-medium">Nam</span>' : '<span class="text-pink-600 font-medium">Nữ</span>'}</td>
-          <td class="px-3 py-3 text-slate-600">${escapeHtml(s.ethnicity)}</td>
-          <td class="px-3 py-3">
-            <span class="font-medium text-slate-800">${escapeHtml(s.householdHead)}</span>
-            <span class="text-[10px] text-slate-400 block">(${escapeHtml(s.householdRelation || 'Con')})</span>
-          </td>
-          <td class="px-3 py-3 font-medium text-slate-700">${escapeHtml(s.addressGroup)}</td>
-          <td class="px-3 py-3">
-            <div class="font-medium text-slate-800">${escapeHtml(s.currentSchool || '--')}</div>
-            <div class="text-[10px] text-slate-500">${escapeHtml(s.currentGrade || '--')}</div>
-          </td>
-          <td class="px-3 py-3">${statusHtml}</td>
-          <td class="px-3 py-3">${policyHtml}</td>
-          <td class="px-3 py-3 text-center">
-            <div class="flex items-center justify-center space-x-1">
-              <button onclick="viewHouseholdByHead('${escapeHtml(s.householdHead)}')" class="p-1.5 text-slate-500 hover:text-sky-700 rounded hover:bg-slate-100 transition" title="Xem phiếu hộ gia đình">
-                <i class="fa-solid fa-house-user"></i>
+        return `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-2.5 px-3 text-center text-slate-500 font-mono">${index + 1}</td>
+            <td class="py-2.5 px-3 font-semibold text-slate-800">${hoTen}</td>
+            <td class="py-2.5 px-2 text-center text-slate-600">${dob}</td>
+            <td class="py-2.5 px-2 text-center text-emerald-700 font-bold">${d.nu ? 'x' : ''}</td>
+            <td class="py-2.5 px-3 text-slate-600">${d.danToc || 'Kinh'}</td>
+            <td class="py-2.5 px-3 font-mono font-bold text-blue-700 text-xs">${d.soPhieu || ''}</td>
+            <td class="py-2.5 px-3 text-slate-700">${chuHo}</td>
+            <td class="py-2.5 px-3 text-slate-700">${d.diaChi || ''}</td>
+            <td class="py-2.5 px-3 text-slate-600">${d.quanHe || ''}</td>
+            <td class="py-2.5 px-3 text-emerald-800 font-medium">${trinhDo}</td>
+            <td class="py-2.5 px-3 text-xs text-slate-500">${d.dienCuTru || ''}</td>
+            <td class="py-2.5 px-3 text-center space-x-1 whitespace-nowrap">
+              <button onclick="openModal(${d.id})" class="p-1.5 text-blue-600 hover:bg-blue-100 rounded" title="Sửa">
+                <i class="fa-solid fa-pen-to-square"></i>
               </button>
-              <button onclick="editStudent('${s.id}')" class="p-1.5 text-sky-600 hover:text-sky-800 rounded hover:bg-sky-50 transition" title="Sửa bản ghi">
-                <i class="fa-solid fa-pen"></i>
+              <button onclick="deleteRecord(${d.id})" class="p-1.5 text-rose-600 hover:bg-rose-100 rounded" title="Xóa">
+                <i class="fa-solid fa-trash"></i>
               </button>
-              <button onclick="confirmDeleteStudent('${s.id}')" class="p-1.5 text-red-500 hover:text-red-700 rounded hover:bg-red-50 transition" title="Xóa">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            </div>
-          </td>
+            </td>
+          </tr>
         `;
-        tbody.appendChild(tr);
-      });
+      }).join('');
     }
 
-    function applyFilters() {
-      const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-      const village = document.getElementById('filterVillage').value;
-      const ageGroup = document.getElementById('filterAgeGroup').value;
-      const status = document.getElementById('filterStatus').value;
-      const policy = document.getElementById('filterPolicy').value;
+    // 6. Cập nhật Thống kê Dashboard
+    function updateStatistics() {
+      const currentYear = new Date().getFullYear();
+      document.getElementById('statTotal').innerText = dataList.length;
 
-      const filtered = students.filter(s => {
-        // Search term check
-        const matchesSearch = !searchTerm || 
-          s.fullName.toLowerCase().includes(searchTerm) || 
-          s.cccd.toLowerCase().includes(searchTerm) ||
-          s.householdHead.toLowerCase().includes(searchTerm);
+      // Đếm số hộ duy nhất theo số phiếu
+      const households = new Set(dataList.map(x => x.soPhieu).filter(Boolean));
+      document.getElementById('statHouseholds').innerText = households.size;
 
-        // Village check
-        const matchesVillage = !village || s.addressGroup === village;
-
-        // Age group check
-        const age = calculateAge(s.dob);
-        let matchesAge = true;
-        if (ageGroup === 'mn') matchesAge = (age >= 0 && age <= 5);
-        else if (ageGroup === '6t') matchesAge = (age === 6);
-        else if (ageGroup === 'th') matchesAge = (age >= 6 && age <= 10);
-        else if (ageGroup === 'thcs') matchesAge = (age >= 11 && age <= 14);
-        else if (ageGroup === 'post_thcs') matchesAge = (age >= 15 && age <= 18);
-
-        // Status check
-        const matchesStatus = !status || s.status === status;
-
-        // Policy check
-        let matchesPolicy = true;
-        if (policy === 'KhuyetTat') matchesPolicy = (s.policyType === 'Khuyết tật');
-        else if (policy === 'HoNgheo') matchesPolicy = (s.policyType === 'Hộ nghèo' || s.policyType === 'Hộ cận nghèo');
-        else if (policy === 'MoCoi') matchesPolicy = (s.policyType === 'Mồ côi');
-
-        return matchesSearch && matchesVillage && matchesAge && matchesStatus && matchesPolicy;
-      });
-
-      renderStudentTable(filtered);
-    }
-
-    function populateDropdowns() {
-      const villageSelect = document.getElementById('filterVillage');
-      const householdSelect = document.getElementById('householdSelect');
-      
-      // Get unique villages
-      const villages = Array.from(new Set(students.map(s => s.addressGroup))).filter(Boolean).sort();
-      const currentSelectedVillage = villageSelect.value;
-      villageSelect.innerHTML = '<option value="">-- Tất cả thôn xóm --</option>';
-      villages.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        if (v === currentSelectedVillage) opt.selected = true;
-        villageSelect.appendChild(opt);
-      });
-
-      // Get unique households
-      const householdMap = new Map();
-      students.forEach(s => {
-        if (!householdMap.has(s.householdHead)) {
-          householdMap.set(s.householdHead, {
-            head: s.householdHead,
-            address: s.addressGroup,
-            count: 0
-          });
+      let mn = 0, th = 0, thcs = 0, kt = 0;
+      dataList.forEach(item => {
+        if (item.nam) {
+          const age = currentYear - item.nam;
+          if (age >= 0 && age <= 5) mn++;
+          if (age >= 6 && age <= 10) th++;
+          if (age >= 11 && age <= 14) thcs++;
         }
-        householdMap.get(s.householdHead).count++;
+        if (item.khuyetTatType) kt++;
       });
 
-      const currentSelectedHead = householdSelect.value;
-      householdSelect.innerHTML = '';
-      householdMap.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.head;
-        opt.textContent = `${item.head} (${item.address} - ${item.count} đối tượng)`;
-        if (item.head === currentSelectedHead) opt.selected = true;
-        householdSelect.appendChild(opt);
-      });
+      document.getElementById('statMamNon').innerText = mn;
+      document.getElementById('statTieuHoc').innerText = th;
+      document.getElementById('statTHCS').innerText = thcs;
+      document.getElementById('statKhuyetTat').innerText = kt;
     }
 
-    function renderHouseholdForm() {
-      const select = document.getElementById('householdSelect');
-      const headName = select.value;
-      if (!headName) return;
-
-      const members = students.filter(s => s.householdHead === headName);
-      if (members.length === 0) return;
-
-      const first = members[0];
-      document.getElementById('printHeadName').textContent = first.householdHead;
-      document.getElementById('printSignHeadName').textContent = first.householdHead;
-      document.getElementById('printHouseholdId').textContent = 'HGD-' + first.cccd.slice(-4);
-      document.getElementById('printVillage').textContent = first.addressGroup;
-      document.getElementById('printPhone').textContent = first.phone || 'Chưa cập nhật';
-      
-      const policies = Array.from(new Set(members.map(m => m.policyType))).filter(p => p !== 'Bình thường');
-      document.getElementById('printPolicy').textContent = policies.length > 0 ? policies.join(', ') : 'Bình thường';
-      document.getElementById('printNotes').textContent = first.notes || 'Hộ gia đình sinh sống ổn định tại địa phương.';
-
-      // Populate print table
-      const tbody = document.getElementById('printMembersTableBody');
-      tbody.innerHTML = '';
-
-      members.forEach((m, idx) => {
-        const tr = document.createElement('tr');
-        const age = calculateAge(m.dob);
-        let statusText = 'Đang học';
-        if (m.status === 'ChuaDiHoc') statusText = 'Chưa đi học';
-        if (m.status === 'BoHoc') statusText = 'Bỏ học';
-        if (m.status === 'HoanThanh') statusText = 'Đã hoàn thành';
-        if (m.status === 'ChuyenDi') statusText = 'Đã chuyển đi';
-
-        tr.innerHTML = `
-          <td class="border border-black p-1 text-center">${idx + 1}</td>
-          <td class="border border-black p-1 font-semibold">${escapeHtml(m.fullName)}</td>
-          <td class="border border-black p-1 text-center">${formatDate(m.dob)} (${age}t)</td>
-          <td class="border border-black p-1 text-center">${escapeHtml(m.gender)}</td>
-          <td class="border border-black p-1 text-center">${escapeHtml(m.ethnicity)}</td>
-          <td class="border border-black p-1 text-center">${escapeHtml(m.householdRelation || 'Con')}</td>
-          <td class="border border-black p-1">${escapeHtml(m.currentSchool || '')} - ${escapeHtml(m.currentGrade || '')}</td>
-          <td class="border border-black p-1 text-center">${statusText}</td>
-          <td class="border border-black p-1 italic">${escapeHtml(m.notes || '')}</td>
-        `;
-        tbody.appendChild(tr);
-      });
+    function updateThonFilterOptions() {
+      const sel = document.getElementById('filterThon');
+      const cur = sel.value;
+      const thons = [...new Set(dataList.map(x => x.diaChi).filter(Boolean))];
+      sel.innerHTML = '<option value="">-- Tất cả Thôn/Tổ --</option>' + 
+        thons.map(t => `<option value="${t}" ${t === cur ? 'selected' : ''}>${t}</option>`).join('');
     }
 
-    function viewHouseholdByHead(headName) {
-      switchTab('household');
-      const sel = document.getElementById('householdSelect');
-      sel.value = headName;
-      renderHouseholdForm();
-    }
+    // 7. XUẤT FILE EXCEL CHUẨN ĐÚNG THEO FILE MẪU BỘ GD&ĐT
+    function exportExcel() {
+      if (dataList.length === 0) {
+        alert("Chưa có dữ liệu để xuất Excel!");
+        return;
+      }
 
-    function renderReports() {
-      const tbody = document.getElementById('reportCohortTableBody');
-      tbody.innerHTML = '';
-
-      const cohorts = [
-        { title: 'Trẻ 5 tuổi (Phổ cập Mầm non)', birthYear: CURRENT_YEAR - 5, age: '5 tuổi', targetRate: 100 },
-        { title: 'Trẻ 6 tuổi (Huy động vào Lớp 1)', birthYear: CURRENT_YEAR - 6, age: '6 tuổi', targetRate: 100 },
-        { title: 'Độ tuổi Tiểu học', birthYear: `${CURRENT_YEAR - 10} - ${CURRENT_YEAR - 6}`, age: '6 - 10 tuổi', targetRate: 98, isPrimary: true },
-        { title: 'Độ tuổi THCS', birthYear: `${CURRENT_YEAR - 14} - ${CURRENT_YEAR - 11}`, age: '11 - 14 tuổi', targetRate: 95, isSecondary: true }
+      // Xây dựng 3 dòng Header chuẩn theo file mẫu
+      const r0 = [
+        null, "TT", "Họ đệm", "Tên", "Ngày", "Tháng", "Năm sinh", "Nữ", "Dân tộc", "Tôn giáo", "Diện ưu tiên",
+        "Chủ hộ", null, "Địa chỉ: số nhà, tên đường, tổ (nếu có)", "Số phiếu", "Diện cư trú", "Tình trạng cư trú",
+        "Khối học", "Lớp học", null, null, "Mã trường", "Bậc tốt nghiệp", "Bổ túc", "Năm tốt nghiệp", "Bậc TN nghề",
+        null, "Năm TN nghề", "Học xong", null, "Bỏ học", null, "Đang học lớp", "Hoàn thành lớp", "Tái mù chữ mức",
+        "Khuyết tật vận động", "Khuyết tật nghe nói", "Khuyết tật nhìn", "Khuyết tật thần kinh, tâm thần",
+        "Khuyết tật trí tuệ", "Khuyết tật học tập", "Tự kỷ", "Khuyết tật khác", "Có chứng nhận khuyết tật",
+        "Khả năng học tập", "Hoàn cảnh đặc biệt", "Chi tiết hoàn cảnh đặt biệt", "Quan hệ với chủ hộ",
+        "Họ tên cha hoặc mẹ", "Điện thoại", "Ghi chú"
       ];
 
-      cohorts.forEach(c => {
-        let cohortStudents = [];
-        if (c.age === '5 tuổi') {
-          cohortStudents = students.filter(s => calculateAge(s.dob) === 5);
-        } else if (c.age === '6 tuổi') {
-          cohortStudents = students.filter(s => calculateAge(s.dob) === 6);
-        } else if (c.isPrimary) {
-          cohortStudents = students.filter(s => {
-            const a = calculateAge(s.dob);
-            return a >= 6 && a <= 10;
-          });
-        } else if (c.isSecondary) {
-          cohortStudents = students.filter(s => {
-            const a = calculateAge(s.dob);
-            return a >= 11 && a <= 14;
-          });
-        }
+      const r1 = new Array(51).fill(null);
+      r1[11] = "Họ đệm";
+      r1[12] = "Tên";
+      r1[28] = "Lớp";
+      r1[29] = "Năm";
+      r1[30] = "Lớp";
+      r1[31] = "Năm";
 
-        const totalInCohort = cohortStudents.length;
-        const inSchool = cohortStudents.filter(s => s.status === 'DungDoTuoi' || s.status === 'TraiTuyen' || s.status === 'HoanThanh').length;
-        const rate = totalInCohort > 0 ? ((inSchool / totalInCohort) * 100).toFixed(1) : '100.0';
-        const isPassed = parseFloat(rate) >= c.targetRate;
+      const r2 = [
+        null, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, null, null, null,
+        20, 21, 22, 23, null, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
+        39, 40, 41, 42, 43, 44, 45, 46, 47
+      ];
 
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50';
-        tr.innerHTML = `
-          <td class="p-3 border border-slate-200 font-semibold text-slate-800">${c.title}</td>
-          <td class="p-3 border border-slate-200 text-center font-mono text-xs">${c.birthYear}</td>
-          <td class="p-3 border border-slate-200 text-center">${c.age}</td>
-          <td class="p-3 border border-slate-200 text-center font-bold">${totalInCohort}</td>
-          <td class="p-3 border border-slate-200 text-center text-emerald-700 font-semibold">${inSchool}</td>
-          <td class="p-3 border border-slate-200 text-center font-bold ${isPassed ? 'text-emerald-600' : 'text-red-600'}">
-            ${rate}% <span class="text-[10px] text-slate-400 font-normal">(Chỉ tiêu: ≥${c.targetRate}%)</span>
-          </td>
-          <td class="p-3 border border-slate-200 text-center">
-            ${isPassed ? 
-              `<span class="bg-emerald-100 text-emerald-800 text-[11px] font-semibold px-2.5 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i>Đạt Chuẩn Mức Độ 3</span>` : 
-              `<span class="bg-amber-100 text-amber-800 text-[11px] font-semibold px-2.5 py-1 rounded-full"><i class="fa-solid fa-exclamation mr-1"></i>Cần nâng cao tỷ lệ</span>`
-            }
-          </td>
-        `;
-        tbody.appendChild(tr);
+      // Đưa dữ liệu các dòng
+      const rows = [r0, r1, r2];
+
+      dataList.forEach((d, idx) => {
+        const row = new Array(51).fill(null);
+        row[0] = idx + 1; // Unnamed col 0
+        row[1] = idx + 1; // TT
+        row[2] = d.hoDem || "";
+        row[3] = d.ten || "";
+        row[4] = d.ngay || null;
+        row[5] = d.thang || null;
+        row[6] = d.nam || null;
+        row[7] = d.nu ? "x" : null;
+        row[8] = d.danToc || "Kinh";
+        row[9] = d.tonGiao || null;
+        row[10] = d.uuTien || null;
+
+        row[11] = d.chuHoHoDem || "";
+        row[12] = d.chuHoTen || "";
+        row[13] = d.diaChi || "";
+        row[14] = d.soPhieu || "";
+        row[15] = d.dienCuTru || "Thường trú";
+        row[16] = d.tinhTrangCuTru || null;
+
+        row[17] = d.khoiHoc || null;
+        row[18] = d.lopHoc || null;
+        row[21] = d.maTruong || null;
+        row[22] = d.bacTN || null;
+        row[23] = d.boTuc || null;
+        row[24] = d.namTN || null;
+        row[25] = d.bacTNNghe || null;
+        row[27] = d.namTNNghe || null;
+        row[28] = d.hocXongLop || null;
+        row[29] = d.hocXongNam || null;
+        row[30] = d.boHocLop || null;
+        row[31] = d.boHocNam || null;
+
+        row[32] = d.xmcDangHoc || null;
+        row[33] = d.xmcHoanThanh || null;
+        row[34] = d.taiMuChu || null;
+
+        // Xử lý cột Khuyết tật theo dạng chọn
+        if (d.khuyetTatType === 'van_dong') row[35] = "x";
+        if (d.khuyetTatType === 'nghe_noi') row[36] = "x";
+        if (d.khuyetTatType === 'nhin') row[37] = "x";
+        if (d.khuyetTatType === 'than_kinh') row[38] = "x";
+        if (d.khuyetTatType === 'tri_tue') row[39] = "x";
+        if (d.khuyetTatType === 'hoc_tap') row[40] = "x";
+        if (d.khuyetTatType === 'tu_ky') row[41] = "x";
+        if (d.khuyetTatType === 'khac') row[42] = "x";
+
+        row[47] = d.quanHe || "Con";
+        row[48] = d.hotenChaMe || "";
+        row[49] = d.dienThoai || "";
+        row[50] = d.ghiChu || "";
+
+        rows.push(row);
       });
 
-      // Village comparison breakdown
-      const vBody = document.getElementById('villageStatsTableBody');
-      vBody.innerHTML = '';
-      const villages = Array.from(new Set(students.map(s => s.addressGroup))).filter(Boolean).sort();
-
-      villages.forEach(v => {
-        const vStudents = students.filter(s => s.addressGroup === v);
-        const mn = vStudents.filter(s => calculateAge(s.dob) <= 5).length;
-        const th = vStudents.filter(s => { const a = calculateAge(s.dob); return a >= 6 && a <= 10; }).length;
-        const thcs = vStudents.filter(s => { const a = calculateAge(s.dob); return a >= 11 && a <= 14; }).length;
-        const notInSchool = vStudents.filter(s => s.status === 'ChuaDiHoc' || s.status === 'BoHoc').length;
-        const total = vStudents.length;
-        const enrolled = total - notInSchool;
-        const rate = total > 0 ? Math.round((enrolled / total) * 100) : 100;
-
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50';
-        tr.innerHTML = `
-          <td class="p-3 border border-slate-200 font-semibold text-slate-800">${escapeHtml(v)}</td>
-          <td class="p-3 border border-slate-200 text-center font-bold">${total}</td>
-          <td class="p-3 border border-slate-200 text-center text-pink-700">${mn}</td>
-          <td class="p-3 border border-slate-200 text-center text-emerald-700">${th}</td>
-          <td class="p-3 border border-slate-200 text-center text-purple-700">${thcs}</td>
-          <td class="p-3 border border-slate-200 text-center font-bold ${notInSchool > 0 ? 'text-red-600' : 'text-slate-400'}">${notInSchool}</td>
-          <td class="p-3 border border-slate-200 text-center font-bold text-sky-700">${rate}%</td>
-        `;
-        vBody.appendChild(tr);
-      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Danh sách phiếu điều tra");
+      XLSX.writeFile(wb, `PCGD_Xuat_Du_Lieu_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
 
-    function openModal(modalId) {
-      document.getElementById(modalId).classList.remove('hidden');
-    }
-
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.add('hidden');
-      if (modalId === 'addStudentModal') {
-        document.getElementById('studentForm').reset();
-        document.getElementById('editStudentId').value = '';
-        document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-user-plus text-amber-300"></i><span>Thêm Mới Đối Tượng Điều Tra Phổ Cập</span>';
-        document.getElementById('calculatedAgeNotice').textContent = '-- Tuổi: tự động tính --';
-      }
-    }
-
-    function updateCalculatedAgePreview() {
-      const dobVal = document.getElementById('formDob').value;
-      if (dobVal) {
-        const age = calculateAge(dobVal);
-        document.getElementById('calculatedAgeNotice').textContent = `Năm sinh: ${new Date(dobVal).getFullYear()} (${age} tuổi vào năm ${CURRENT_YEAR})`;
-      } else {
-        document.getElementById('calculatedAgeNotice').textContent = '-- Tuổi: tự động tính --';
-      }
-    }
-
-    function editStudent(id) {
-      const s = students.find(item => item.id === id);
-      if (!s) return;
-
-      document.getElementById('editStudentId').value = s.id;
-      document.getElementById('formCccd').value = s.cccd;
-      document.getElementById('formFullName').value = s.fullName;
-      document.getElementById('formDob').value = s.dob;
-      document.getElementById('formGender').value = s.gender;
-      document.getElementById('formEthnicity').value = s.ethnicity;
-      document.getElementById('formHouseholdHead').value = s.householdHead;
-      document.getElementById('formHouseholdRelation').value = s.householdRelation || 'Con';
-      document.getElementById('formPhone').value = s.phone || '';
-      document.getElementById('formAddressGroup').value = s.addressGroup;
-      document.getElementById('formCurrentSchool').value = s.currentSchool || '';
-      document.getElementById('formCurrentGrade').value = s.currentGrade || '';
-      document.getElementById('formStatus').value = s.status;
-      document.getElementById('formPolicyType').value = s.policyType || 'Bình thường';
-      document.getElementById('formNotes').value = s.notes || '';
-
-      updateCalculatedAgePreview();
-      document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-amber-300"></i><span>Cập Nhật Thông Tin Đối Tượng</span>';
-      openModal('addStudentModal');
-    }
-
-    function saveStudentForm(event) {
-      event.preventDefault();
-      const editId = document.getElementById('editStudentId').value;
-      
-      const studentObj = {
-        id: editId || 'PC-' + Date.now().toString().slice(-6),
-        cccd: document.getElementById('formCccd').value.trim(),
-        fullName: document.getElementById('formFullName').value.trim(),
-        dob: document.getElementById('formDob').value,
-        gender: document.getElementById('formGender').value,
-        ethnicity: document.getElementById('formEthnicity').value.trim(),
-        householdHead: document.getElementById('formHouseholdHead').value.trim(),
-        householdRelation: document.getElementById('formHouseholdRelation').value,
-        phone: document.getElementById('formPhone').value.trim(),
-        addressGroup: document.getElementById('formAddressGroup').value.trim(),
-        currentSchool: document.getElementById('formCurrentSchool').value.trim(),
-        currentGrade: document.getElementById('formCurrentGrade').value.trim(),
-        status: document.getElementById('formStatus').value,
-        policyType: document.getElementById('formPolicyType').value,
-        notes: document.getElementById('formNotes').value.trim()
-      };
-
-      if (editId) {
-        const index = students.findIndex(s => s.id === editId);
-        if (index !== -1) {
-          students[index] = studentObj;
-          showToast(`Đã cập nhật hồ sơ: ${studentObj.fullName}`, 'success');
-        }
-      } else {
-        students.unshift(studentObj);
-        showToast(`Đã thêm mới đối tượng: ${studentObj.fullName}`, 'success');
-      }
-
-      saveDataToLocalStorage();
-      renderAllData();
-      closeModal('addStudentModal');
-    }
-
-    let currentDeleteId = null;
-    function confirmDeleteStudent(id) {
-      currentDeleteId = id;
-      const s = students.find(item => item.id === id);
-      showCustomConfirm(
-        'Xóa bản ghi điều tra',
-        `Bạn có chắc chắn muốn xóa hồ sơ của cháu "${s ? s.fullName : ''}"? Dữ liệu này sẽ mất khỏi danh sách.`,
-        () => {
-          students = students.filter(item => item.id !== currentDeleteId);
-          saveDataToLocalStorage();
-          renderAllData();
-          showToast('Đã xóa thành công bản ghi', 'info');
-        }
-      );
-    }
-
-    function confirmResetSampleData() {
-      showCustomConfirm(
-        'Khôi phục dữ liệu mẫu',
-        'Thao tác này sẽ đặt lại danh sách ban đầu với 14 bản ghi mẫu chuẩn. Bạn có đồng ý?',
-        () => {
-          students = JSON.parse(JSON.stringify(INITIAL_SAMPLE_DATA));
-          saveDataToLocalStorage();
-          renderAllData();
-          showToast('Đã nạp lại dữ liệu mẫu thực tế thành công!', 'success');
-        }
-      );
-    }
-
-    function showCustomConfirm(title, message, onAccept) {
-      const modal = document.getElementById('confirmModal');
-      document.getElementById('confirmModalTitle').textContent = title;
-      document.getElementById('confirmModalMessage').textContent = message;
-      
-      const acceptBtn = document.getElementById('confirmAcceptBtn');
-      const cancelBtn = document.getElementById('confirmCancelBtn');
-
-      const cleanup = () => {
-        modal.classList.add('hidden');
-        acceptBtn.onclick = null;
-        cancelBtn.onclick = null;
-      };
-
-      acceptBtn.onclick = () => {
-        cleanup();
-        if (onAccept) onAccept();
-      };
-      cancelBtn.onclick = () => {
-        cleanup();
-      };
-
-      modal.classList.remove('hidden');
-    }
-
-    function exportToExcel() {
-      try {
-        const excelRows = students.map((s, idx) => ({
-          'STT': idx + 1,
-          'Mã định danh/CCCD': s.cccd,
-          'Họ và tên': s.fullName,
-          'Ngày sinh': s.dob,
-          'Tuổi (năm 2026)': calculateAge(s.dob),
-          'Giới tính': s.gender,
-          'Dân tộc': s.ethnicity,
-          'Chủ hộ/Cha mẹ': s.householdHead,
-          'Quan hệ': s.householdRelation,
-          'Số điện thoại': s.phone,
-          'Thôn/Bản': s.addressGroup,
-          'Trường đang học': s.currentSchool,
-          'Lớp học': s.currentGrade,
-          'Tình trạng': s.status,
-          'Diện chính sách': s.policyType,
-          'Ghi chú': s.notes
-        }));
-
-        const worksheet = XLSX.utils.json_to_sheet(excelRows);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachPhoCap");
-        
-        // Write file
-        XLSX.writeFile(workbook, `BaoCao_PhoCapGiaoDuc_${CURRENT_YEAR}.xlsx`);
-        showToast('Đã tạo và tải xuống file Excel thành công!', 'success');
-      } catch (err) {
-        console.error(err);
-        showToast('Có lỗi khi tạo file Excel', 'error');
-      }
-    }
-
-    function exportBackupJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `SaoLuu_PhoCap_${CURRENT_YEAR}_${Date.now()}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      showToast('Đã tải xuống file sao lưu JSON an toàn', 'success');
-    }
-
-    function handleImportJSON(event) {
-      const file = event.target.files[0];
+    // 8. NHẬP FILE EXCEL MẪU
+    function importExcel(e) {
+      const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function(evt) {
         try {
-          const importedData = JSON.parse(e.target.result);
-          if (Array.isArray(importedData)) {
-            students = importedData;
-            saveDataToLocalStorage();
-            renderAllData();
-            showToast(`Khôi phục thành công ${students.length} bản ghi!`, 'success');
-          } else {
-            showToast('Định dạng tệp tin JSON không hợp lệ!', 'error');
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+          if (rawRows.length < 4) {
+            alert("File Excel không có dòng dữ liệu hợp lệ (Dữ liệu bắt đầu từ dòng 4)!");
+            return;
           }
+
+          let addedCount = 0;
+          // Dữ liệu bắt đầu từ index 3 (dòng thứ 4 của file)
+          for (let r = 3; r < rawRows.length; r++) {
+            const row = rawRows[r];
+            if (!row || (!row[2] && !row[3])) continue; // Bỏ qua dòng trống
+
+            let ktType = '';
+            if (row[35]) ktType = 'van_dong';
+            else if (row[36]) ktType = 'nghe_noi';
+            else if (row[37]) ktType = 'nhin';
+            else if (row[38]) ktType = 'than_kinh';
+            else if (row[39]) ktType = 'tri_tue';
+            else if (row[40]) ktType = 'hoc_tap';
+            else if (row[41]) ktType = 'tu_ky';
+            else if (row[42]) ktType = 'khac';
+
+            dataList.push({
+              id: Date.now() + Math.random(),
+              hoDem: String(row[2] || '').trim(),
+              ten: String(row[3] || '').trim(),
+              ngay: row[4] ? String(row[4]) : '',
+              thang: row[5] ? String(row[5]) : '',
+              nam: parseInt(row[6]) || '',
+              nu: String(row[7] || '').trim() ? 'x' : '',
+              danToc: String(row[8] || 'Kinh').trim(),
+              tonGiao: String(row[9] || '').trim(),
+              uuTien: String(row[10] || '').trim(),
+
+              chuHoHoDem: String(row[11] || '').trim(),
+              chuHoTen: String(row[12] || '').trim(),
+              diaChi: String(row[13] || '').trim(),
+              soPhieu: String(row[14] || '').trim().toUpperCase(),
+              dienCuTru: String(row[15] || 'Thường trú').trim(),
+              tinhTrangCuTru: String(row[16] || '').trim(),
+
+              khoiHoc: String(row[17] || '').trim(),
+              lopHoc: String(row[18] || '').trim(),
+              maTruong: String(row[21] || '').trim(),
+              bacTN: String(row[22] || '').trim(),
+              boTuc: String(row[23] || '').trim(),
+              namTN: String(row[24] || '').trim(),
+              bacTNNghe: String(row[25] || '').trim(),
+              namTNNghe: String(row[27] || '').trim(),
+              hocXongLop: String(row[28] || '').trim(),
+              hocXongNam: String(row[29] || '').trim(),
+              boHocLop: String(row[30] || '').trim(),
+              boHocNam: String(row[31] || '').trim(),
+
+              xmcDangHoc: String(row[32] || '').trim(),
+              xmcHoanThanh: String(row[33] || '').trim(),
+              taiMuChu: String(row[34] || '').trim(),
+              khuyetTatType: ktType,
+
+              quanHe: String(row[47] || 'Con').trim(),
+              hotenChaMe: String(row[48] || '').trim(),
+              dienThoai: String(row[49] || '').trim(),
+              ghiChu: String(row[50] || '').trim()
+            });
+            addedCount++;
+          }
+
+          saveToStorage();
+          alert(`Đã nhập thành công ${addedCount} bản ghi từ file Excel!`);
         } catch (err) {
-          showToast('Lỗi khi phân tích tệp sao lưu JSON', 'error');
+          alert("Lỗi khi đọc file Excel: " + err.message);
         }
       };
-      reader.readAsText(file);
-      event.target.value = ''; // reset
+      reader.readAsArrayBuffer(file);
+      e.target.value = '';
     }
 
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-      document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active', 'text-sky-700', 'bg-sky-50', 'font-semibold', 'border-b-2', 'border-sky-600');
-        btn.classList.add('text-slate-600');
-      });
-
-      const activeSection = document.getElementById(`tab-${tabId}`);
-      if (activeSection) activeSection.classList.remove('hidden');
-
-      const activeBtn = document.getElementById(`tabBtn-${tabId}`);
-      if (activeBtn) {
-        activeBtn.classList.add('active', 'text-sky-700', 'bg-sky-50', 'font-semibold', 'border-b-2', 'border-sky-600');
-        activeBtn.classList.remove('text-slate-600');
-      }
-
-      // Close mobile navigation menu after selection
-      document.getElementById('mobileNavMenu').classList.add('hidden');
-
-      // Specific tab hook
-      if (tabId === 'household') {
-        renderHouseholdForm();
-      } else if (tabId === 'reports') {
-        renderReports();
-      } else if (tabId === 'dashboard') {
-        updateDashboard();
-      }
+    // 9. Sao lưu JSON
+    function backupData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataList, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `PCGD_Backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
-
-    function toggleMobileNav() {
-      const menu = document.getElementById('mobileNavMenu');
-      menu.classList.toggle('hidden');
-    }
-
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      
-      let bg = 'bg-slate-800 text-white';
-      let icon = '<i class="fa-solid fa-circle-info text-sky-400 mr-2"></i>';
-      if (type === 'success') {
-        bg = 'bg-emerald-800 text-white';
-        icon = '<i class="fa-solid fa-circle-check text-emerald-400 mr-2"></i>';
-      } else if (type === 'error') {
-        bg = 'bg-red-800 text-white';
-        icon = '<i class="fa-solid fa-circle-exclamation text-red-400 mr-2"></i>';
-      }
-
-      toast.className = `${bg} px-4 py-2.5 rounded-xl text-xs font-medium shadow-lg flex items-center transition-all duration-300 opacity-0 transform translate-y-2 pointer-events-auto`;
-      toast.innerHTML = `${icon}<span>${escapeHtml(message)}</span>`;
-
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.classList.remove('opacity-0', 'translate-y-2');
-      }, 20);
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-2');
-        setTimeout(() => toast.remove(), 300);
-      }, 3500);
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr) return '--';
-      const parts = dateStr.split('-');
-      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      return dateStr;
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function renderAllData() {
-      updateDashboard();
-      populateDropdowns();
-      applyFilters();
-      renderHouseholdForm();
-      renderReports();
-    }
-
-    // App Initialization on window load
-    window.onload = function () {
-      loadData();
-      renderAllData();
-    };
   </script>
 </body>
 </html>
